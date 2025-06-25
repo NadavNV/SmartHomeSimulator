@@ -5,16 +5,15 @@ import paho.mqtt.client as paho
 import json
 import logging
 import logging.handlers
-import atexit
 
 from device import Device
 from device_types import DeviceType
 
-from devices.air_conditioner import AirConditioner, Mode, FanSpeed, Swing
-from devices.light import Light
-from devices.curtain import Curtain
-from devices.door_lock import DoorLock
-from devices.water_heater import WaterHeater
+from air_conditioner import AirConditioner, Mode, FanSpeed, Swing
+from light import Light
+from curtain import Curtain
+from door_lock import DoorLock
+from water_heater import WaterHeater
 
 BROKER_HOST = "test.mosquitto.org"
 BROKER_PORT = 1883
