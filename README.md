@@ -1,7 +1,7 @@
 # SmartHomeSimulator
 
 Part of our final project in DevSecOps course at Bar-Ilan
-University. [Main project repository](https://github.com/NadavNV/SmartHomeConfig). The project allows viewing and
+University ([Main project repository](https://github.com/NadavNV/SmartHomeConfig)). The project allows viewing and
 managing different Smart home devices such as lights, water heaters, or air conditioners.
 
 It is divided into several microservices, and this microservice simulates the behaviour of real-world devices (e.g. if a
