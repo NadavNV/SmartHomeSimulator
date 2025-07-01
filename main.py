@@ -5,6 +5,8 @@ import paho.mqtt.client as paho
 import json
 import logging
 import logging.handlers
+import requests
+import os
 
 from device import Device
 from device_types import DeviceType
@@ -17,8 +19,10 @@ from water_heater import WaterHeater
 
 BROKER_HOST = "test.mosquitto.org"
 BROKER_PORT = 1883
-# Temporary local json -> stand in for a future database
+# Temporary local json -> stand in for API access
 DATA_FILE_NAME = "./data.json"
+
+API_URL = os.getenv("API_URL", default='http://localhost:5200')
 
 devices: list[Device] = []
 logger = logging.getLogger(__name__)
@@ -102,11 +106,10 @@ def create_device(device_data: dict, mqtt_client: paho.Client) -> None:
                 return
             else:
                 logger.error(f"Failed to create device {device_data['id']}")
+                return
         except ValueError:
             logger.exception(f"Failed to create device {device_data['id']}")
-            return
     logger.error("Missing required field")
-    return
 
 
 # Validates that the request data contains all the required fields
@@ -129,6 +132,7 @@ def id_exists(device_id):
 def on_connect(client, userdata, connect_flags, reason_code, properties):
     logger.info(f'CONNACK received with code {reason_code}.')
     if reason_code == 0:
+        logger.info("Connected successfully")
         client.subscribe("project/home/#")
 
 
@@ -162,10 +166,10 @@ def on_message(
             logger.error("Payload missing sender")
             return
 
-        # Extract device_id from topic: expected format project/home/<room>/<device_id>/<method>
+        # Extract device_id from topic: expected format project/home/<device_id>/<method>
         topic_parts = message.topic.split('/')
-        if len(topic_parts) >= 5:
-            device_id = topic_parts[3]
+        if len(topic_parts) == 4:
+            device_id = topic_parts[2]
             method = topic_parts[-1]
             match method:
                 case "action" | "update":
@@ -225,8 +229,15 @@ def main() -> None:
     for device_data in data:
         create_device(device_data=device_data, mqtt_client=mqtt_client)
 
-    mqtt_client.connect(BROKER_HOST, BROKER_PORT)
+    # response = requests.get(API_URL + '/api/devices')
+    # if 200 <= response.status_code < 400:
+    #     for device_data in response.json():
+    #         create_device(device_data=device_data, mqtt_client=mqtt_client)
+    # else:
+    #     logger.error(f"Failed to get devices {response.status_code}")
+    #     return
 
+    mqtt_client.connect(BROKER_HOST, BROKER_PORT)
     mqtt_client.loop_start()
 
     while True:
