@@ -7,6 +7,7 @@ import logging
 import logging.handlers
 import requests
 import os
+import atexit
 
 from device import Device
 from device_types import DeviceType
@@ -19,8 +20,6 @@ from water_heater import WaterHeater
 
 BROKER_HOST = "test.mosquitto.org"
 BROKER_PORT = 1883
-# Temporary local json -> stand in for API access
-DATA_FILE_NAME = "./data.json"
 
 API_URL = os.getenv("API_URL", default='http://localhost:5200')
 
@@ -28,7 +27,7 @@ devices: list[Device] = []
 logger = logging.getLogger(__name__)
 
 
-def create_device(device_data: dict, mqtt_client: paho.Client) -> None:
+def create_device(device_data: dict) -> None:
     if validate_device_data(device_data):
         if id_exists(device_data["id"]):
             logger.error("ID already exists")
@@ -183,7 +182,7 @@ def on_message(
                                 return
                     logger.error(f"Device ID {device_id} not found")
                 case "post":
-                    create_device(device_data=payload, mqtt_client=client)
+                    create_device(device_data=payload)
                     return
                 case "delete":
                     index_to_delete = None
@@ -208,34 +207,38 @@ def on_message(
         logger.exception("Value error")
 
 
+mqtt_client = paho.Client(paho.CallbackAPIVersion.VERSION2)
+mqtt_client.on_message = on_message
+mqtt_client.on_connect = on_connect
+mqtt_client.on_subscribe = on_subscribe
+
+
+@atexit.register
+def shutdown() -> None:
+    mqtt_client.loop_stop()
+    mqtt_client.disconnect()
+    logger.info("Shutting down")
+
+
 def main() -> None:
     logging.basicConfig(
         format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
         handlers=[
             # Prints to sys.stderr
             logging.StreamHandler(),
-            # Writes to a log file which rotates every hour
-            logging.handlers.TimedRotatingFileHandler(filename="simulator.log", backupCount=5)],
+            # Writes to a log file which rotates every 5kb, or gets overwritten when the app is restarted
+            logging.handlers.RotatingFileHandler(filename="simulator.log", mode='w', maxBytes=1024 * 5, backupCount=3)],
         level=logging.DEBUG,
     )
-    mqtt_client = paho.Client(paho.CallbackAPIVersion.VERSION2)
-    mqtt_client.on_message = on_message
-    mqtt_client.on_connect = on_connect
-    mqtt_client.on_subscribe = on_subscribe
+    logger.info("Starting SmartHomeSimulator")
 
-    data = []
-    with open(DATA_FILE_NAME, mode="r", encoding="utf-8") as read_file:
-        data = json.load(read_file)
-    for device_data in data:
-        create_device(device_data=device_data, mqtt_client=mqtt_client)
-
-    # response = requests.get(API_URL + '/api/devices')
-    # if 200 <= response.status_code < 400:
-    #     for device_data in response.json():
-    #         create_device(device_data=device_data, mqtt_client=mqtt_client)
-    # else:
-    #     logger.error(f"Failed to get devices {response.status_code}")
-    #     return
+    response = requests.get(API_URL + '/api/devices')
+    if 200 <= response.status_code < 400:
+        for device_data in response.json():
+            create_device(device_data=device_data)
+    else:
+        logger.error(f"Failed to get devices {response.status_code}")
+        return
 
     mqtt_client.connect(BROKER_HOST, BROKER_PORT)
     mqtt_client.loop_start()

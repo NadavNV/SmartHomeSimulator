@@ -92,8 +92,7 @@ class Device:
         self._logger.info(f"Device {self.id} tick")
 
     def publish_mqtt(self, action_parameters: dict, update_parameters) -> None:
-        room_topic = self.room.lower().replace(" ", "-")
-        topic = f"project/home/{room_topic}/{self.id}"
+        topic = f"project/home/{self.id}"
         if action_parameters:
             payload = json.dumps({
                 "sender": "simulator",
