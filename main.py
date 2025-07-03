@@ -223,10 +223,14 @@ mqtt_client.on_subscribe = on_subscribe
 def shutdown() -> None:
     mqtt_client.loop_stop()
     mqtt_client.disconnect()
+    if os.path.exists("./status"):
+        os.remove("./status")
     logger.info("Shutting down")
 
 
 def main() -> None:
+    with open("./status", "w") as file:
+        file.write("healthy\n")
     logging.basicConfig(
         format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
         handlers=[
@@ -244,6 +248,7 @@ def main() -> None:
     )
     logger.info("Starting SmartHomeSimulator")
 
+    logger.info("Fetching devices . . .")
     for attempt in range(RETRIES):
         try:
             response = requests.get(API_URL + '/api/devices')
@@ -256,25 +261,34 @@ def main() -> None:
                 logger.error(f"Failed to get devices {response.status_code}.")
                 logger.error(f"Attempt {attempt + 1}/{RETRIES} failed. Retrying in {delay:.2f} seconds...")
                 sleep(delay)
-        except ConnectionError:
-            logger.error(f"Failed to connect to ")
+        except requests.exceptions.ConnectionError:
+            logger.error(f"Failed to connect to backend")
             delay = 2 ** attempt + random.random()
+            logger.error(f"Attempt {attempt + 1}/{RETRIES} failed. Retrying in {delay:.2f} seconds...")
             sleep(delay)
 
+    if not devices:
+        logger.error("Failed to fetch devices. Shutting down.")
+        sys.exit(1)
+
+    logger.info("Connecting to MQTT broker . . .")
     for attempt in range(RETRIES):
         try:
             mqtt_client.connect(BROKER_HOST, BROKER_PORT)
         except socket.gaierror:
             delay = 2 ** attempt + random.random()
-            logger.error("Failed to connect to backend.")
+            logger.error("Failed to connect to MQTT broker.")
             logger.error(f"Attempt {attempt + 1}/{RETRIES} failed. Retrying in {delay:.2f} seconds...")
             sleep(delay)
     mqtt_client.loop_start()
     sleep(3)
     if not mqtt_client.is_connected():
-        logger.error("Failed to connect to MQTT server. Shutting down.")
+        logger.error("Failed to connect to MQTT broker. Shutting down.")
         mqtt_client.loop_stop()
         sys.exit(1)
+
+    with open("./status", "a") as file:
+        file.write("ready\n")
 
     while True:
         sleep(2)
