@@ -76,9 +76,10 @@ class DoorLock(Device):
         update_parameters = {}
         # Drain battery
         if self.battery_level >= MIN_BATTERY:
-            self.battery_level -= BATTERY_DRAIN
-        if self.battery_level < MIN_BATTERY:
-            self.battery_level = MAX_BATTERY
+            try:
+                self.battery_level -= BATTERY_DRAIN
+            except ValueError:
+                self.battery_level = MAX_BATTERY
         action_parameters['battery_level'] = self.battery_level
         # Randomly lock or unlock
         random.seed()

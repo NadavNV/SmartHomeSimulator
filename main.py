@@ -7,7 +7,10 @@ import logging
 import logging.handlers
 import requests
 import os
+import sys
 import atexit
+import socket
+import random
 
 from device import Device
 from device_types import DeviceType
@@ -20,6 +23,9 @@ from water_heater import WaterHeater
 
 BROKER_HOST = "test.mosquitto.org"
 BROKER_PORT = 1883
+
+# How many times to attempt a connection request
+RETRIES = 5
 
 API_URL = os.getenv("API_URL", default='http://localhost:5200')
 
@@ -226,22 +232,49 @@ def main() -> None:
         handlers=[
             # Prints to sys.stderr
             logging.StreamHandler(),
-            # Writes to a log file which rotates every 5kb, or gets overwritten when the app is restarted
-            logging.handlers.RotatingFileHandler(filename="simulator.log", mode='w', maxBytes=1024 * 5, backupCount=3)],
-        level=logging.DEBUG,
+            # Writes to a log file which rotates every 1mb, or gets overwritten when the app is restarted
+            logging.handlers.RotatingFileHandler(
+                filename="simulator.log",
+                mode='w',
+                maxBytes=1024 * 1024,
+                backupCount=3
+            )
+        ],
+        level=logging.INFO,
     )
     logger.info("Starting SmartHomeSimulator")
 
-    response = requests.get(API_URL + '/api/devices')
-    if 200 <= response.status_code < 400:
-        for device_data in response.json():
-            create_device(device_data=device_data)
-    else:
-        logger.error(f"Failed to get devices {response.status_code}")
-        return
+    for attempt in range(RETRIES):
+        try:
+            response = requests.get(API_URL + '/api/devices')
+            if 200 <= response.status_code < 400:
+                for device_data in response.json():
+                    create_device(device_data=device_data)
+                break
+            else:
+                delay = 2 ** attempt + random.random()
+                logger.error(f"Failed to get devices {response.status_code}.")
+                logger.error(f"Attempt {attempt + 1}/{RETRIES} failed. Retrying in {delay:.2f} seconds...")
+                sleep(delay)
+        except ConnectionError:
+            logger.error(f"Failed to connect to ")
+            delay = 2 ** attempt + random.random()
+            sleep(delay)
 
-    mqtt_client.connect(BROKER_HOST, BROKER_PORT)
+    for attempt in range(RETRIES):
+        try:
+            mqtt_client.connect(BROKER_HOST, BROKER_PORT)
+        except socket.gaierror:
+            delay = 2 ** attempt + random.random()
+            logger.error("Failed to connect to backend.")
+            logger.error(f"Attempt {attempt + 1}/{RETRIES} failed. Retrying in {delay:.2f} seconds...")
+            sleep(delay)
     mqtt_client.loop_start()
+    sleep(3)
+    if not mqtt_client.is_connected():
+        logger.error("Failed to connect to MQTT server. Shutting down.")
+        mqtt_client.loop_stop()
+        sys.exit(1)
 
     while True:
         sleep(2)
