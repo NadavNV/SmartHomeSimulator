@@ -41,6 +41,7 @@ def create_device(device_data: dict) -> None:
         try:
             match device_data['type']:
                 case DeviceType.WATER_HEATER:
+                    logger.info(f"Creating water heater: {device_data}")
                     new_device = WaterHeater(
                         device_id=device_data['id'],
                         room=device_data['room'],
