@@ -113,7 +113,6 @@ class WaterHeater(Device):
         - Randomly apply change
         - Publish changes to MQTT
         """
-        super().tick()
         action_parameters = {}
         update_parameters = {}
         # Adjusting temperature

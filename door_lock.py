@@ -71,7 +71,6 @@ class DoorLock(Device):
         - Randomly apply status change
         - Publish changes to MQTT
         """
-        super().tick()
         action_parameters = {}
         update_parameters = {}
         # Drain battery

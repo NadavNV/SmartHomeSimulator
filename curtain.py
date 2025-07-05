@@ -56,7 +56,6 @@ class Curtain(Device):
         - Randomly apply status change
         - Publish changes to MQTT
         """
-        super().tick()
         action_parameters = {}
         update_parameters = {}
         # Adjust position

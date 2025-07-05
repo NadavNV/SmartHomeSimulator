@@ -118,7 +118,6 @@ class AirConditioner(Device):
         - Randomly apply change
         - Publish changes to MQTT
         """
-        super().tick()
         action_parameters = {}
         update_parameters = {}
         random.seed()
