@@ -73,7 +73,6 @@ class Device:
 
     @status.setter
     def status(self, value: str) -> None:
-        self.logger.info(f"Setting status of {self.name} to {value}")
         match self.type:
             case DeviceType.DOOR_LOCK:
                 if value not in ['open', 'locked']:
@@ -90,7 +89,7 @@ class Device:
         """
         Actions to perform on every iteration of the main loop
         """
-        self._logger.info(f"Device {self.id} tick")
+        raise NotImplementedError()
 
     def publish_mqtt(self, action_parameters: dict, update_parameters) -> None:
         topic = f"project/home/{self.id}"
