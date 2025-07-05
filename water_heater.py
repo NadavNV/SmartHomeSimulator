@@ -138,16 +138,11 @@ class WaterHeater(Device):
             ):
                 update_parameters['status'] = self.status = "off"
         # Adjusting is_heating
-        self._logger.info("Adjusting is_heating")
-        self._logger.info(f"is_heating: {self.is_heating}, status: {self.status}, temp: {self.temperature}, "
-                          f"target temp: {self.target_temperature}")
         if self.is_heating:
             self._logger.info("Is heating")
             if self.temperature >= self.target_temperature or self.status == "off":
-                self._logger.info("Turning heating off")
                 action_parameters["is_heating"] = self._is_heating = False
         elif self.status == "on" and self.temperature < self.target_temperature:
-            self._logger.info("Turning heating on")
             action_parameters["is_heating"] = self._is_heating = True
         # Random change
         random.seed()

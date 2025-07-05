@@ -69,10 +69,11 @@ class Device:
 
     @property
     def status(self) -> str:
-        return self._name
+        return self._status
 
     @status.setter
     def status(self, value: str) -> None:
+        self.logger.info(f"Setting status of {self.name} to {value}")
         match self.type:
             case DeviceType.DOOR_LOCK:
                 if value not in ['open', 'locked']:
