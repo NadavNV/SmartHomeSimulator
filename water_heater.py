@@ -60,6 +60,13 @@ class WaterHeater(Device):
         self._scheduled_on: time = scheduled_on
         self._scheduled_off: time = scheduled_off
 
+    @staticmethod
+    def fix_time_string(string: str) -> str:
+        if len(string) == 4:  # single-digit hours
+            return "0" + string
+        else:
+            return string
+
     @property
     def temperature(self) -> int:
         return self._temperature
@@ -167,9 +174,8 @@ class WaterHeater(Device):
                             minute=random.randint(0, 59),
                         )
                     self.scheduled_on = next_time
-                    action_parameters['scheduled_on'] = str(self.scheduled_on.hour) + ':' + str(
-                        self.scheduled_on.minute
-                    )
+                    action_parameters['scheduled_on'] = self.fix_time_string(
+                        str(self.scheduled_on.hour) + ':' + str(self.scheduled_on.minute))
                 case 'scheduled_off':
                     next_time = self.scheduled_off
                     while next_time == self.scheduled_off:
@@ -178,9 +184,8 @@ class WaterHeater(Device):
                             minute=random.randint(0, 59),
                         )
                     self.scheduled_off = next_time
-                    action_parameters['scheduled_off'] = str(self.scheduled_off.hour) + ':' + str(
-                        self.scheduled_off.minute
-                    )
+                    action_parameters['scheduled_off'] = self.fix_time_string(
+                        str(self.scheduled_off.hour) + ':' + str(self.scheduled_off.minute))
                 case _:
                     print(f"Unknown element {element_to_change}")
         # Publish changes
@@ -203,9 +208,9 @@ class WaterHeater(Device):
                         case "timer_enabled":
                             self.timer_enabled = value
                         case "scheduled_on":
-                            self.scheduled_on = time.fromisoformat(value)
+                            self.scheduled_on = time.fromisoformat(self.fix_time_string(value))
                         case "scheduled_off":
-                            self.scheduled_off = time.fromisoformat(value)
+                            self.scheduled_off = time.fromisoformat(self.fix_time_string(value))
                     self._logger.info(f"Setting parameter '{key}' to value '{value}'")
                 except ValueError:
                     self._logger.exception(f"Incorrect value {value} for parameter {key}")

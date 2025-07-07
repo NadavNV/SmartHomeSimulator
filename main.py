@@ -34,96 +34,85 @@ logger = logging.getLogger(__name__)
 
 
 def create_device(device_data: dict) -> None:
-    if validate_device_data(device_data):
-        if id_exists(device_data["id"]):
-            logger.error("ID already exists")
+    required_fields = {'id', 'room', 'name', 'type'}
+    if not required_fields <= device_data.keys():
+        logger.error(f"Missing required field(s): {required_fields - device_data.keys()} ")
+        return
+    if id_exists(device_data["id"]):
+        logger.error("ID already exists")
+        return
+    kwargs = {
+        'device_id': device_data['id'],
+        'room': device_data['room'],
+        'name': device_data['name'],
+        'mqtt_client': mqtt_client,
+        'logger': logger,
+    }
+    parameters = device_data.get("parameters", {})
+    if 'status' in device_data:
+        kwargs['status'] = device_data['status']
+    try:
+        match device_data['type']:
+            case DeviceType.WATER_HEATER:
+                if 'temperature' in parameters:
+                    kwargs['temperature'] = parameters['temperature']
+                if 'target_temperature' in parameters:
+                    kwargs['target_temperature'] = parameters['target_temperature']
+                if 'is_heating' in parameters:
+                    kwargs['is_heating'] = parameters['is_heating']
+                if 'timer_enabled' in parameters:
+                    kwargs['timer_enabled'] = parameters['timer_enabled']
+                if 'scheduled_on' in parameters:
+                    kwargs['scheduled_on'] = time.fromisoformat(
+                        WaterHeater.fix_time_string(parameters['scheduled_on'])
+                    )
+                if 'scheduled_off' in parameters:
+                    kwargs['scheduled_off'] = time.fromisoformat(
+                        WaterHeater.fix_time_string(parameters['scheduled_off'])
+                    )
+                new_device = WaterHeater(**kwargs)
+            case DeviceType.CURTAIN:
+                if 'position' in parameters:
+                    kwargs['position'] = parameters['position']
+                new_device = Curtain(**kwargs)
+            case DeviceType.DOOR_LOCK:
+                if 'auto_lock_enabled' in parameters:
+                    kwargs['auto_lock_enabled'] = parameters['auto_lock_enabled']
+                if 'battery_level' in parameters:
+                    kwargs['battery_level'] = parameters['battery_level']
+                new_device = DoorLock(**kwargs)
+            case DeviceType.LIGHT:
+                if 'is_dimmable' in parameters:
+                    kwargs['is_dimmable'] = parameters['is_dimmable']
+                if 'brightness' in parameters:
+                    kwargs['brightness'] = parameters['brightness']
+                if 'dynamic_color' in parameters:
+                    kwargs['dynamic_color'] = parameters['dynamic_color']
+                if 'color' in parameters:
+                    kwargs['color'] = parameters['color']
+                new_device = Light(**kwargs)
+            case DeviceType.AIR_CONDITIONER:
+                if 'temperature' in parameters:
+                    kwargs['temperature'] = parameters['temperature']
+                if 'mode' in parameters:
+                    kwargs['mode'] = Mode(parameters['mode'])
+                if 'fan_speed' in parameters:
+                    kwargs['fan_speed'] = FanSpeed(parameters['fan_speed'])
+                if 'swing' in parameters:
+                    kwargs['swing'] = Swing(parameters['swing'])
+                new_device = AirConditioner(**kwargs)
+            case _:
+                logger.error(f"Unknown device type {device_data['type']}")
+                return
+        if new_device is not None:
+            devices.append(new_device)
+            logger.info("Device added successfully")
             return
-        try:
-            match device_data['type']:
-                case DeviceType.WATER_HEATER:
-                    new_device = WaterHeater(
-                        device_id=device_data['id'],
-                        room=device_data['room'],
-                        name=device_data['name'],
-                        mqtt_client=mqtt_client,
-                        logger=logger,
-                        status=device_data['status'],
-                        temperature=device_data['parameters']['temperature'],
-                        target_temperature=device_data['parameters']['target_temperature'],
-                        is_heating=device_data['parameters']['is_heating'],
-                        timer_enabled=device_data['parameters']['timer_enabled'],
-                        scheduled_on=time.fromisoformat(device_data['parameters']['scheduled_on']),
-                        scheduled_off=time.fromisoformat(device_data['parameters']['scheduled_off']),
-                    )
-                case DeviceType.CURTAIN:
-                    new_device = Curtain(
-                        device_id=device_data['id'],
-                        room=device_data['room'],
-                        name=device_data['name'],
-                        mqtt_client=mqtt_client,
-                        logger=logger,
-                        status=device_data['status'],
-                        position=device_data['parameters']['position'],
-                    )
-                case DeviceType.DOOR_LOCK:
-                    new_device = DoorLock(
-                        device_id=device_data['id'],
-                        room=device_data['room'],
-                        name=device_data['name'],
-                        mqtt_client=mqtt_client,
-                        logger=logger,
-                        status=device_data['status'],
-                        auto_lock_enabled=device_data['parameters']['auto_lock_enabled'],
-                        battery_level=device_data['parameters']['battery_level'],
-                    )
-                case DeviceType.LIGHT:
-                    new_device = Light(
-                        device_id=device_data['id'],
-                        room=device_data['room'],
-                        name=device_data['name'],
-                        mqtt_client=mqtt_client,
-                        logger=logger,
-                        status=device_data['status'],
-                        is_dimmable=device_data['parameters']['is_dimmable'],
-                        brightness=device_data['parameters']['brightness'],
-                        dynamic_color=device_data['parameters']['dynamic_color'],
-                        color=device_data['parameters']['color'],
-                    )
-                case DeviceType.AIR_CONDITIONER:
-                    new_device = AirConditioner(
-                        device_id=device_data['id'],
-                        room=device_data['room'],
-                        name=device_data['name'],
-                        mqtt_client=mqtt_client,
-                        logger=logger,
-                        status=device_data['status'],
-                        temperature=device_data['parameters']['temperature'],
-                        mode=Mode(value=device_data['parameters']['mode']),
-                        fan_speed=FanSpeed(value=device_data['parameters']['fan_speed']),
-                        swing=Swing(value=device_data['parameters']['swing']),
-                    )
-                case _:
-                    logger.error(f"Unknown device type {device_data['type']}")
-                    return
-            if new_device is not None:
-                devices.append(new_device)
-                logger.info("Device added successfully")
-                return
-            else:
-                logger.error(f"Failed to create device {device_data['id']}")
-                return
-        except ValueError:
-            logger.exception(f"Failed to create device {device_data['id']}")
-    logger.error("Missing required field")
-
-
-# Validates that the request data contains all the required fields
-def validate_device_data(new_device):
-    required_fields = ['id', 'type', 'room', 'name', 'status', 'parameters']
-    for field in required_fields:
-        if field not in new_device:
-            return False
-    return True
+        else:
+            logger.error(f"Failed to create device {device_data['id']}")
+            return
+    except ValueError:
+        logger.exception(f"Failed to create device {device_data['id']}")
 
 
 # Checks the validity of the device id
