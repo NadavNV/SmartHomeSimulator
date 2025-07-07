@@ -14,8 +14,6 @@ simulate human interaction.
 
 - A working [backend instance](https://github.com/NadavNV/SmartHomeBackend).
 - [Python3](https://www.python.org/downloads/)
-- [paho-mqtt](https://pypi.org/project/paho-mqtt/) >= 2.0.0
-- [requests](https://pypi.org/project/requests/) >= 2.32.4
 
 ## Usage
 
