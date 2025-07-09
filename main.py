@@ -21,8 +21,8 @@ from curtain import Curtain
 from door_lock import DoorLock
 from water_heater import WaterHeater
 
-BROKER_HOST = "test.mosquitto.org"
-BROKER_PORT = 1883
+BROKER_HOST = os.getenv("BROKER_HOST", "test.mosquitto.org")
+BROKER_PORT = int(os.getenv("BROKER_PORT", 1883))
 
 # How many times to attempt a connection request
 RETRIES = 5
