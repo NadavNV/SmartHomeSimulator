@@ -137,8 +137,19 @@ def id_exists(device_id):
 def on_connect(client, userdata, connect_flags, reason_code, properties):
     logger.info(f'CONNACK received with code {reason_code}.')
     if reason_code == 0:
+        with open("./status", "a") as file:
+            file.write("ready\n")
         logger.info("Connected successfully")
         client.subscribe("project/home/#")
+
+
+def on_disconnect(client, userdata, disconnect_flags, reason_code, properties=None):
+    if reason_code == 0:
+        logger.warning(f"Disconnected from broker.")
+    else:
+        logger.warning(f"Disconnected from broker with reason: {reason_code}")
+    with open("./status", "w") as file:
+        file.write("healthy\n")
 
 
 def on_subscribe(
@@ -216,6 +227,7 @@ def on_message(
 mqtt_client = paho.Client(paho.CallbackAPIVersion.VERSION2)
 mqtt_client.on_message = on_message
 mqtt_client.on_connect = on_connect
+mqtt_client.on_disconnect = on_disconnect
 mqtt_client.on_subscribe = on_subscribe
 
 
@@ -271,24 +283,8 @@ def main() -> None:
         logger.error("Failed to fetch devices. Shutting down.")
         sys.exit(1)
 
-    logger.info("Connecting to MQTT broker . . .")
-    for attempt in range(RETRIES):
-        try:
-            mqtt_client.connect(BROKER_HOST, BROKER_PORT)
-        except socket.gaierror:
-            delay = 2 ** attempt + random.random()
-            logger.error("Failed to connect to MQTT broker.")
-            logger.error(f"Attempt {attempt + 1}/{RETRIES} failed. Retrying in {delay:.2f} seconds...")
-            sleep(delay)
+    mqtt_client.connect_async(BROKER_HOST, BROKER_PORT, 60)
     mqtt_client.loop_start()
-    sleep(3)
-    if not mqtt_client.is_connected():
-        logger.error("Failed to connect to MQTT broker. Shutting down.")
-        mqtt_client.loop_stop()
-        sys.exit(1)
-
-    with open("./status", "a") as file:
-        file.write("ready\n")
 
     while True:
         sleep(2)
