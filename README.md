@@ -14,21 +14,23 @@ simulate human interaction.
 
 - A working [backend instance](https://github.com/NadavNV/SmartHomeBackend).
 - [Python3](https://www.python.org/downloads/)
-- [paho-mqtt](https://pypi.org/project/paho-mqtt/) >= 2.0.0
-- [requests](https://pypi.org/project/requests/) >= 2.32.4
 
 ## Usage
 
 - To run on your local machine:
     - Make sure you have python installed and a running backend instance.
-    - Clone this repo.
+    - Clone this repo:
+      ```bash
+      git clone https://github.com/NadavNV/SmartHomeDashboard.git
+      cd SmartHomeDashboard
+      ```
     - Run `pip install -r requirements.txt`.
     - Set an environment variable named `API_URL` whose value is the full address of the backend instance, including
       port
       (e.g. `http://localhost:5200`).
     - Run `python main.py`.
 - To run in a Docker container:
-    - Make sure you have a running backend instance.
+    - Make sure you have a running backend instance and Docker engine.
     - Clone this repo.
     - Run `docker build -t <name for the image> .`.
     - Run `docker run -e "API_URL=<full backend address>" <image name>`.
