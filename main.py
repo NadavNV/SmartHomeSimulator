@@ -213,7 +213,7 @@ def on_message(
         logger.exception("Value error")
 
 
-mqtt_client = paho.Client(paho.CallbackAPIVersion.VERSION2)
+mqtt_client = paho.Client(paho.CallbackAPIVersion.VERSION2, protocol=paho.MQTTv5)
 mqtt_client.on_message = on_message
 mqtt_client.on_connect = on_connect
 mqtt_client.on_disconnect = on_disconnect

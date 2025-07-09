@@ -13,6 +13,7 @@ MIN_BRIGHTNESS = 0
 MAX_BRIGHTNESS = 100
 DEFAULT_DYNAMIC_COLOR = False
 DEFAULT_COLOR = "#FFFFFF"
+COLOR_REGEX = '^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$'
 
 PARAMETERS: list[str] = [
     "brightness",
@@ -51,11 +52,10 @@ class Light(Device):
         else:
             raise ValueError(f"Brightness must be between {MIN_BRIGHTNESS} and {MAX_BRIGHTNESS}")
         self._dynamic_color = dynamic_color
-        pattern = r'^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$'
-        if bool(re.match(pattern, color)):
+        if bool(re.match(COLOR_REGEX, color)):
             self._color = color
         else:
-            raise ValueError("Color must be a valid hex code")
+            raise ValueError(f"Color must be a valid hex code, got {color} instead.")
 
     @property
     def is_dimmable(self) -> bool:
@@ -90,11 +90,10 @@ class Light(Device):
 
     @color.setter
     def color(self, value: str) -> None:
-        pattern = r'^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$'
-        if bool(re.match(pattern, value)):
+        if bool(re.match(COLOR_REGEX, value)):
             self._color = value
         else:
-            raise ValueError("Color must be a valid hex code")
+            raise ValueError(f"Color must be a valid hex code, got {value} instead.")
 
     @override
     def tick(self) -> None:
