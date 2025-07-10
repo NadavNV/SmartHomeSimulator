@@ -25,7 +25,7 @@ class DoorLock(Device):
             name: str,
             mqtt_client: paho.Client,
             logger: logging.Logger,
-            status: str = "open",
+            status: str = "unlocked",
             auto_lock_enabled: bool = DEFAULT_AUTO_LOCK,
             battery_level: int = DEFAULT_BATTERY,
     ):
@@ -83,7 +83,7 @@ class DoorLock(Device):
         # Randomly lock or unlock
         random.seed()
         if random.random() < CHANCE_TO_CHANGE:
-            update_parameters['status'] = self.status = "locked" if self.status == "open" else "open"
+            update_parameters['status'] = self.status = "locked" if self.status == "unlocked" else "unlocked"
         self.publish_mqtt(action_parameters, update_parameters)
 
     @override

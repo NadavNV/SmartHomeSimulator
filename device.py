@@ -31,8 +31,8 @@ class Device:
         self._name: str = name
         match self.type:
             case DeviceType.DOOR_LOCK:
-                if status not in ['open', 'locked']:
-                    raise ValueError(f"Status of {self.type.value} must be either 'open' or 'locked'")
+                if status not in ['unlocked', 'locked']:
+                    raise ValueError(f"Status of {self.type.value} must be either 'unlocked' or 'locked'")
             case DeviceType.CURTAIN:
                 if status not in ['open', 'closed']:
                     raise ValueError(f"Status of {self.type.value} must be either 'open' or 'closed'")
@@ -75,8 +75,8 @@ class Device:
     def status(self, value: str) -> None:
         match self.type:
             case DeviceType.DOOR_LOCK:
-                if value not in ['open', 'locked']:
-                    raise ValueError(f"Status of {self.type.value} must be either 'open' or 'locked'")
+                if value not in ['unlocked', 'locked']:
+                    raise ValueError(f"Status of {self.type.value} must be either 'unlocked' or 'locked'")
             case DeviceType.CURTAIN:
                 if value not in ['open', 'closed']:
                     raise ValueError(f"Status of {self.type.value} must be either 'open' or 'closed'")
