@@ -9,7 +9,6 @@ import requests
 import os
 import sys
 import atexit
-import socket
 import random
 
 from device import Device
@@ -260,6 +259,7 @@ def main() -> None:
             else:
                 delay = 2 ** attempt + random.random()
                 logger.error(f"Failed to get devices {response.status_code}.")
+                logger.error(f"{response.text}")
                 logger.error(f"Attempt {attempt + 1}/{RETRIES} failed. Retrying in {delay:.2f} seconds...")
                 sleep(delay)
         except requests.exceptions.ConnectionError:
