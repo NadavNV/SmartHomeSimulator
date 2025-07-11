@@ -175,7 +175,7 @@ class WaterHeater(Device):
                         )
                     self.scheduled_on = next_time
                     action_parameters['scheduled_on'] = self.fix_time_string(
-                        str(self.scheduled_on.hour) + ':' + str(self.scheduled_on.minute))
+                        str(self.scheduled_on.hour).zfill(2) + ':' + str(self.scheduled_on.minute)).zfill(2)
                 case 'scheduled_off':
                     next_time = self.scheduled_off
                     while next_time == self.scheduled_off:
@@ -185,7 +185,7 @@ class WaterHeater(Device):
                         )
                     self.scheduled_off = next_time
                     action_parameters['scheduled_off'] = self.fix_time_string(
-                        str(self.scheduled_off.hour) + ':' + str(self.scheduled_off.minute))
+                        str(self.scheduled_off.hour).zfill(2) + ':' + str(self.scheduled_off.minute)).zfill(2)
                 case _:
                     print(f"Unknown element {element_to_change}")
         # Publish changes
