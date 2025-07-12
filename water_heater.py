@@ -62,10 +62,12 @@ class WaterHeater(Device):
 
     @staticmethod
     def fix_time_string(string: str) -> str:
-        if len(string) == 4:  # single-digit hours
-            return "0" + string
-        else:
-            return string
+        if ":" not in string:
+            raise ValueError(f"Invalid time string: {string}")
+        hours, minutes = string.split(":")
+        hours = hours.zfill(2)
+        minutes = minutes.zfill(2)
+        return f"{hours}:{minutes}"
 
     @property
     def temperature(self) -> int:
@@ -175,7 +177,7 @@ class WaterHeater(Device):
                         )
                     self.scheduled_on = next_time
                     action_parameters['scheduled_on'] = self.fix_time_string(
-                        str(self.scheduled_on.hour).zfill(2) + ':' + str(self.scheduled_on.minute)).zfill(2)
+                        str(self.scheduled_on.hour).zfill(2) + ':' + str(self.scheduled_on.minute).zfill(2))
                 case 'scheduled_off':
                     next_time = self.scheduled_off
                     while next_time == self.scheduled_off:
@@ -185,7 +187,7 @@ class WaterHeater(Device):
                         )
                     self.scheduled_off = next_time
                     action_parameters['scheduled_off'] = self.fix_time_string(
-                        str(self.scheduled_off.hour).zfill(2) + ':' + str(self.scheduled_off.minute)).zfill(2)
+                        str(self.scheduled_off.hour).zfill(2) + ':' + str(self.scheduled_off.minute).zfill(2))
                 case _:
                     print(f"Unknown element {element_to_change}")
         # Publish changes
