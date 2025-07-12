@@ -1,8 +1,9 @@
 import json
 import logging
-
+from main import client_id
 import paho.mqtt.client as paho
-
+from paho.mqtt.properties import Properties
+from paho.mqtt.packettypes import PacketTypes
 from device_types import DeviceType
 
 CHANCE_TO_CHANGE = 0.01
@@ -93,18 +94,18 @@ class Device:
 
     def publish_mqtt(self, action_parameters: dict, update_parameters) -> None:
         topic = f"project/home/{self.id}"
+        properties = Properties(PacketTypes.PUBLISH)
+        properties.UserProperty = [("sender_id", client_id)]
         if action_parameters:
             payload = json.dumps({
-                "sender": "simulator",
                 "contents": action_parameters,
             })
-            self._mqtt_client.publish(topic + "/action", payload.encode(), qos=2)
+            self._mqtt_client.publish(topic + "/action", payload.encode(), qos=2, properties=properties)
         if update_parameters:
             payload = json.dumps({
-                "sender": "simulator",
                 "contents": update_parameters,
             })
-            self._mqtt_client.publish(topic + "/update", payload.encode(), qos=2)
+            self._mqtt_client.publish(topic + "/update", payload.encode(), qos=2, properties=properties)
 
     def update(self, new_values: dict) -> None:
         raise NotImplementedError()

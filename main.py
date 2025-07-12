@@ -1,6 +1,6 @@
 from datetime import time
 from time import sleep
-from typing import Any
+from typing import Any, cast
 import paho.mqtt.client as paho
 import json
 import logging
@@ -122,7 +122,7 @@ def id_exists(device_id):
     return False
 
 
-def on_connect(client, userdata, connect_flags, reason_code, properties):
+def on_connect(client, _userdata, _connect_flags, reason_code, _properties):
     logger.info(f'CONNACK received with code {reason_code}.')
     if reason_code == 0:
         with open("./status", "a") as file:
@@ -131,7 +131,7 @@ def on_connect(client, userdata, connect_flags, reason_code, properties):
         client.subscribe("project/home/#")
 
 
-def on_disconnect(client, userdata, disconnect_flags, reason_code, properties=None):
+def on_disconnect(_client, _userdata, _disconnect_flags, reason_code, _properties=None):
     if reason_code == 0:
         logger.warning(f"Disconnected from broker.")
     else:
@@ -141,37 +141,40 @@ def on_disconnect(client, userdata, disconnect_flags, reason_code, properties=No
 
 
 def on_subscribe(
-        client: paho.Client,
-        userdata: Any,
-        mid: int,
+        _client: paho.Client,
+        _userdata: Any,
+        _mid: int,
         reason_code_list: list[paho.ReasonCodes],
-        properties: paho.Properties,
+        _properties: paho.Properties,
 ):
     for rc in reason_code_list:
         logger.info(f"Subscribed with reason code {rc}")
 
 
 def on_message(
-        client: paho.Client,
-        userdata: Any,
-        message: paho.MQTTMessage,
+        _client: paho.Client,
+        _userdata: Any,
+        msg: paho.MQTTMessage,
 ):
-    logger.info(f"MQTT message received on topic {message.topic}")
+    sender_id = None
+    props = msg.properties
+    user_props = getattr(props, "UserProperty", None)
+    if user_props is not None:
+        sender_id = dict(user_props).get("sender_id")
+
+    if sender_id is None:
+        logger.error("Message missing sender")
+
+    if sender_id == client_id:
+        return
+
+    logger.info(f"MQTT Message Received on {msg.topic}")
+    payload = cast(bytes, msg.payload)
     try:
-        payload = json.loads(message.payload.decode())
-        # Ignore self messages
-        if "sender" in payload:
-            if payload["sender"] == "simulator":
-                logger.info("Ignoring self message")
-                return
-            else:
-                payload = payload["contents"]
-        else:
-            logger.error("Payload missing sender")
-            return
+        payload = json.loads(payload.decode("utf-8"))
 
         # Extract device_id from topic: expected format project/home/<device_id>/<method>
-        topic_parts = message.topic.split('/')
+        topic_parts = msg.topic.split('/')
         if len(topic_parts) == 4:
             device_id = topic_parts[2]
             method = topic_parts[-1]
@@ -205,14 +208,15 @@ def on_message(
                     logger.error(f"Unknown method: {method}")
                     return
         else:
-            logger.error(f"Incorrect topic {message.topic}")
+            logger.error(f"Incorrect topic {msg.topic}")
     except UnicodeError:
         logger.exception("Error decoding payload")
     except ValueError:
         logger.exception("Value error")
 
 
-mqtt_client = paho.Client(paho.CallbackAPIVersion.VERSION2, protocol=paho.MQTTv5)
+client_id = f"simulator-{os.getenv('HOSTNAME')}"
+mqtt_client = paho.Client(paho.CallbackAPIVersion.VERSION2, protocol=paho.MQTTv5, client_id=client_id)
 mqtt_client.on_message = on_message
 mqtt_client.on_connect = on_connect
 mqtt_client.on_disconnect = on_disconnect
