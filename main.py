@@ -128,7 +128,7 @@ def on_connect(client, _userdata, _connect_flags, reason_code, _properties):
         with open("./status", "a") as file:
             file.write("ready\n")
         logger.info("Connected successfully")
-        client.subscribe("$share/simulator/nadavnv-smart-home/devices/#")
+        client.subscribe("project/home/#")
 
 
 def on_disconnect(_client, _userdata, _disconnect_flags, reason_code, _properties=None):
@@ -173,7 +173,7 @@ def on_message(
     try:
         payload = json.loads(payload.decode("utf-8"))
 
-        # Extract device_id from topic: expected format nadavnv-smart-home/devices/<device_id>/<method>
+        # Extract device_id from topic: expected format project/home/<device_id>/<method>
         topic_parts = msg.topic.split('/')
         if len(topic_parts) == 4:
             device_id = topic_parts[2]
