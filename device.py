@@ -93,9 +93,10 @@ class Device:
         raise NotImplementedError()
 
     def publish_mqtt(self, action_parameters: dict, update_parameters) -> None:
-        topic = f"project/home/{self.id}"
+        topic = f"nadavnv-smart-home/devices{self.id}"
         properties = Properties(PacketTypes.PUBLISH)
         properties.UserProperty = [("sender_id", client_id)]
+        # TODO: fold action into update
         if action_parameters:
             payload = json.dumps({
                 "contents": action_parameters,
