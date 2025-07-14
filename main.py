@@ -1,6 +1,6 @@
 from datetime import time
 from time import sleep
-from typing import Any, cast
+from typing import Any
 import paho.mqtt.client as paho
 import json
 import logging
@@ -156,22 +156,19 @@ def on_message(
         _userdata: Any,
         msg: paho.MQTTMessage,
 ):
-    sender_id = None
-    props = msg.properties
-    user_props = getattr(props, "UserProperty", None)
-    if user_props is not None:
-        sender_id = dict(user_props).get("sender_id")
-
-    if sender_id is None:
-        logger.error("Message missing sender")
-
-    if sender_id == client_id:
-        return
-
     logger.info(f"MQTT Message Received on {msg.topic}")
-    payload = cast(bytes, msg.payload)
     try:
-        payload = json.loads(payload.decode("utf-8"))
+        payload = json.loads(msg.payload.decode())
+        # Ignore self messages
+        if "sender" in payload:
+            if payload["sender"] == "simulator":
+                logger.info("Ignoring self message")
+                return
+            else:
+                payload = payload["contents"]
+        else:
+            logger.error("Payload missing sender")
+            return
 
         # Extract device_id from topic: expected format project/home/<device_id>/<method>
         topic_parts = msg.topic.split('/')
@@ -215,8 +212,7 @@ def on_message(
         logger.exception("Value error")
 
 
-client_id = f"simulator-{os.getenv('HOSTNAME')}"
-mqtt_client = paho.Client(paho.CallbackAPIVersion.VERSION2, protocol=paho.MQTTv5, client_id=client_id)
+mqtt_client = paho.Client(paho.CallbackAPIVersion.VERSION2, protocol=paho.MQTTv5)
 mqtt_client.on_message = on_message
 mqtt_client.on_connect = on_connect
 mqtt_client.on_disconnect = on_disconnect
