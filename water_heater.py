@@ -1,31 +1,28 @@
 import config.env  # noqa: F401  # load_dotenv side effect
 import os
+import json
 import random
 import logging
 from typing import Any, Mapping, override
 from datetime import datetime, time, timedelta
-
 import paho.mqtt.client as paho
 
 from device import Device, CHANCE_TO_CHANGE
 from device_types import DeviceType
 
 # Minimum temperature (Celsius) for water heater
-MIN_WATER_TEMP = int(os.getenv('VITE_MIN_WATER_TEMP', 49))
+MIN_WATER_TEMP: int = int(os.getenv('VITE_MIN_WATER_TEMP', 49))
 # Maximum temperature (Celsius) for water heater
-MAX_WATER_TEMP = int(os.getenv('VITE_MAX_WATER_TEMP', 60))
-ROOM_TEMPERATURE = 23
-HEATING_RATE = 1
+MAX_WATER_TEMP: int = int(os.getenv('VITE_MAX_WATER_TEMP', 60))
+ROOM_TEMPERATURE: int = 23
+HEATING_RATE: int = 1
 
-DEFAULT_SCHEDULED_ON = time.fromisoformat("06:30")
-DEFAULT_SCHEDULED_OFF = time.fromisoformat("08:00")
+DEFAULT_SCHEDULED_ON: time = time.fromisoformat(os.getenv("VITE_DEFAULT_START_TIME", "06:30"))
+DEFAULT_SCHEDULED_OFF: time = time.fromisoformat(os.getenv("VITE_DEFAULT_STOP_TIME", "08:00"))
 
-PARAMETERS: list[str] = [
-    "target_temperature",
-    "timer_enabled",
-    "scheduled_on",
-    "scheduled_off",
-]
+PARAMETERS: set[str] = set(json.loads(os.getenv("WATER_HEATER_PARAMETERS", '["temperature","target_temperature",'
+                                                                           '"is_heating","timer_enabled",'
+                                                                           '"scheduled_on","scheduled_off"]')))
 
 
 class WaterHeater(Device):

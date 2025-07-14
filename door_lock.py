@@ -1,5 +1,7 @@
 import config.env  # noqa: F401  # load_dotenv side effect
 from typing import Any, Mapping, override
+import os
+import json
 import random
 import logging
 import paho.mqtt.client as paho
@@ -7,15 +9,13 @@ import paho.mqtt.client as paho
 from device import Device, CHANCE_TO_CHANGE
 from device_types import DeviceType
 
-DEFAULT_AUTO_LOCK = False
-DEFAULT_BATTERY = 100
-MIN_BATTERY = 0
-MAX_BATTERY = 100
-BATTERY_DRAIN = 1
+DEFAULT_AUTO_LOCK: bool = Device.str_to_bool(os.getenv("VITE_DEFAULT_AUTO_LOCK_ENABLED", "False"))
+DEFAULT_BATTERY: int = int(os.getenv("VITE_DEFAULT_BATTERY", 100))
+MIN_BATTERY: int = int(os.getenv("MIN_BATTERY", 0))
+MAX_BATTERY: int = int(os.getenv("MAX_BATTERY", 100))
+BATTERY_DRAIN: int = 1
 
-PARAMETERS: list[str] = [
-    "auto_lock_enabled",
-]
+PARAMETERS: set[str] = set(json.loads(os.getenv("LOCK_PARAMETERS", '["auto_lock_enabled","battery_level"]')))
 
 
 class DoorLock(Device):

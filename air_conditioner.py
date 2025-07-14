@@ -1,3 +1,5 @@
+import json
+
 import config.env  # noqa: F401  # load_dotenv side effect
 import logging
 import os
@@ -30,21 +32,16 @@ class Swing(StrEnum):
 
 
 # Minimum temperature (Celsius) for air conditioner
-MIN_AC_TEMP = int(os.getenv('VITE_MIN_AC_TEMP', 16))
+MIN_AC_TEMP: int = int(os.getenv('VITE_MIN_AC_TEMP', 16))
 # Maximum temperature (Celsius) for air conditioner
-MAX_AC_TEMP = int(os.getenv('VITE_MAX_AC_TEMP', 30))
+MAX_AC_TEMP: int = int(os.getenv('VITE_MAX_AC_TEMP', 30))
 
-DEFAULT_TEMPERATURE = 24
-DEFAULT_MODE = Mode.COOL
-DEFAULT_FAN = FanSpeed.MEDIUM
-DEFAULT_SWING = Swing.OFF
+DEFAULT_AC_TEMPERATURE: int = int(os.getenv("VITE_DEFAULT_AC_TEMP", 24))
+DEFAULT_MODE: Mode = Mode(value=os.getenv("VITE_DEFAULT_AC_MODE", "cool"))
+DEFAULT_FAN: FanSpeed = FanSpeed(value=os.getenv("VITE_DEFAULT_AC_FAN", "low"))
+DEFAULT_SWING: Swing = Swing(value=os.getenv("VITE_DEFAULT_AC_SWING", "off"))
 
-PARAMETERS: list[str] = [
-    "temperature",
-    "mode",
-    "fan_speed",
-    "swing"
-]
+PARAMETERS: set[str] = set(json.loads(os.getenv("AC_PARAMETERS", "[\"temperature\",\"mode\",\"fan_speed\",\"swing\"]")))
 
 
 class AirConditioner(Device):
@@ -57,7 +54,7 @@ class AirConditioner(Device):
             mqtt_client: paho.Client,
             logger: logging.Logger,
             status: str = "off",
-            temperature: int = DEFAULT_TEMPERATURE,
+            temperature: int = DEFAULT_AC_TEMPERATURE,
             mode: Mode = DEFAULT_MODE,
             fan_speed: FanSpeed = DEFAULT_FAN,
             swing: Swing = DEFAULT_SWING

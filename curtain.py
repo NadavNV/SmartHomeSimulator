@@ -1,5 +1,6 @@
 import config.env  # noqa: F401  # load_dotenv side effect
 from typing import Any, Mapping, override
+import os
 import random
 import logging
 import paho.mqtt.client as paho
@@ -7,10 +8,10 @@ import paho.mqtt.client as paho
 from device import Device, CHANCE_TO_CHANGE
 from device_types import DeviceType
 
-DEFAULT_POSITION = 100
-MIN_POSITION = 0
-MAX_POSITION = 100
-POSITION_RATE = 1
+DEFAULT_POSITION: int = int(os.getenv("VITE_DEFAULT_POSITION", 100))
+MIN_POSITION: int = int(os.getenv("MIN_POSITION", 0))
+MAX_POSITION: int = int(os.getenv("MAX_POSITION", 100))
+POSITION_RATE: int = 1
 
 
 class Curtain(Device):

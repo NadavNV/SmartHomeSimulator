@@ -1,6 +1,7 @@
 import config.env  # noqa: F401  # load_dotenv side effect
 import re
 import os
+import json
 import logging
 from typing import Any, Mapping, override
 import random
@@ -11,21 +12,17 @@ from device_types import DeviceType
 
 
 # Minimum brightness for dimmable light
-MIN_BRIGHTNESS = int(os.getenv('VITE_MIN_BRIGHTNESS', 0))
+MIN_BRIGHTNESS: int = int(os.getenv('VITE_MIN_BRIGHTNESS', 0))
 # Maximum brightness for dimmable light
-MAX_BRIGHTNESS = int(os.getenv("VITE_MAX_BRIGHTNESS", 100))
-DEFAULT_DIMMABLE = False
-DEFAULT_BRIGHTNESS = 80
-DEFAULT_DYNAMIC_COLOR = False
-DEFAULT_COLOR = "#FFFFFF"
-COLOR_REGEX = os.getenv("VITE_COLOR_REGEX", '^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$')
+MAX_BRIGHTNESS: int = int(os.getenv("VITE_MAX_BRIGHTNESS", 100))
+DEFAULT_DIMMABLE: bool = Device.str_to_bool(os.getenv("VITE_DEFAULT_DIMMABLE", "false"))
+DEFAULT_BRIGHTNESS: int = int(os.getenv("VITE_DEFAULT_BRIGHTNESS", 80))
+DEFAULT_DYNAMIC_COLOR: bool = Device.str_to_bool(os.getenv("VITE_DEFAULT_DYNAMIC_COLOR", "false"))
+DEFAULT_COLOR: str = os.getenv("VITE_DEFAULT_LIGHT_COLOR", "#FFFFFF")
+COLOR_REGEX: str = os.getenv("VITE_COLOR_REGEX", '^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$')
 
-PARAMETERS: list[str] = [
-    "brightness",
-    "color",
-    "is_dimmable",
-    "dynamic_color",
-]
+PARAMETERS: set[str] = set(json.loads(os.getenv("LIGHT_PARAMETERS", '["brightness","color","is_dimmable",'
+                                                                    '"dynamic_color"]')))
 
 
 class Light(Device):

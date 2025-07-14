@@ -1,5 +1,7 @@
+import config.env  # noqa: F401  # load_dotenv side effect
 import json
 import logging
+import os
 from main import client_id
 import paho.mqtt.client as paho
 from paho.mqtt.properties import Properties
@@ -7,13 +9,8 @@ from paho.mqtt.packettypes import PacketTypes
 from device_types import DeviceType
 from typing import Any, Mapping
 
-CHANCE_TO_CHANGE = 0.01
-GENERAL_PARAMETERS: list[str] = [
-    "room",
-    "name",
-    "status",
-    "parameters"
-]
+CHANCE_TO_CHANGE: float = 0.01
+GENERAL_PARAMETERS: set[str] = set(json.loads(os.getenv("DEVICE_PARAMETERS", '["room","name","status","parameters"]')))
 
 
 class Device:
@@ -124,3 +121,14 @@ class Device:
 
     def update_parameters(self, new_values: Mapping[str, Any]):
         raise NotImplementedError()
+
+    @staticmethod
+    def str_to_bool(string: str) -> bool:
+        """
+        Converts strings such as "false" or "True" to their equivalent boolean value.
+
+        :param str string: The string to convert
+        :return: The boolean value
+        :rtype: bool
+        """
+        return str(string).lower() == "true"
