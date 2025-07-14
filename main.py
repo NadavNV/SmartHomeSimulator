@@ -1,9 +1,9 @@
+import config.env  # noqa: F401  # load_dotenv side effect
 from datetime import time
 from time import sleep
 from typing import Any, cast
 import paho.mqtt.client as paho
 import json
-import logging
 import logging.handlers
 import requests
 import os
@@ -37,6 +37,7 @@ logging.basicConfig(
     ],
     level=logging.INFO,
 )
+logger = logging.getLogger(__name__)
 
 BROKER_HOST = os.getenv("BROKER_HOST", "test.mosquitto.org")
 BROKER_PORT = int(os.getenv("BROKER_PORT", 1883))
@@ -46,15 +47,14 @@ RETRIES = 5
 
 API_URL = os.getenv("API_URL", default='http://localhost:5200')
 
-devices: list[Device] = []
-logger = logging.getLogger(__name__)
+devices: dict[str, Device] = {}
 
 
 def create_device(device_data: dict) -> None:
     success, reason = validate_new_device_data(device_data)
     if not success:
         raise ValueError(reason)
-    if id_exists(device_data["id"]):
+    if device_data["id"] in devices:
         raise ValueError(f"ID {device_data["id"]} already exists")
     kwargs = {
         'device_id': device_data['id'],
@@ -95,20 +95,12 @@ def create_device(device_data: dict) -> None:
         case _:
             raise ValueError(f"Unknown device type {device_data['type']}")
     if new_device is not None:
-        devices.append(new_device)
+        devices[new_device.id] = new_device
         logger.info("Device added successfully")
         return
     else:
         logger.error(f"Failed to create device {device_data['id']}")
         return
-
-
-# Checks the validity of the device id
-def id_exists(device_id):
-    for device in devices:
-        if device_id == device.id:
-            return True
-    return False
 
 
 def on_connect(client, _userdata, _connect_flags, reason_code, _properties):
@@ -168,41 +160,39 @@ def on_message(
             device_id = topic_parts[2]
             method = topic_parts[-1]
             match method:
-                # TODO: Add validation
                 case "update":
-                    for device in devices:
-                        if device.id == device_id:
-                            try:
-                                device.update(payload)
-                                return
-                            except ValueError:
-                                logger.exception(f"Failed to update device {device.id}")
-                                return
+                    # TODO: Make sure id and type can't be changed
+                    if device_id in devices:
+                        success, reason = validate_device_data(payload)
+                        if success:
+                            devices[device_id].update(payload)
+                            return
+                        else:
+                            logger.error(f"Failed to update device, reason: {reason}")
                     logger.error(f"Device ID {device_id} not found")
                 case "post":
-                    create_device(device_data=payload)
-                    return
+                    success, reason = validate_new_device_data(payload)
+                    if success:
+                        create_device(device_data=payload)
+                        return
+                    else:
+                        logger.error(f"Failed to create device, reason: {reason}")
                 case "delete":
-                    index_to_delete = None
-                    if id_exists(device_id):
-                        for index, device in enumerate(devices):
-                            if device.id == device_id:
-                                index_to_delete = index
-                        if index_to_delete is not None:
-                            devices.pop(index_to_delete)
-                            logger.info("Device deleted successfully")
-                            return
-                    logger.error("ID not found")
+                    if device_id in devices:
+                        devices.pop(device_id)
+                        logger.info(f"Device {device_id} deleted successfully")
+                        return
+                    logger.error(f"ID {device_id} not found")
                     return
                 case _:
                     logger.error(f"Unknown method: {method}")
                     return
         else:
             logger.error(f"Incorrect topic {msg.topic}")
-    except UnicodeError:
-        logger.exception("Error decoding payload")
-    except ValueError:
-        logger.exception("Value error")
+    except UnicodeError as e:
+        logger.exception(f"Error decoding payload: {str(e)}")
+    except ValueError as e:
+        logger.exception(f"Value error: {str(e)}")
 
 
 client_id = f"simulator-{os.getenv('HOSTNAME')}"
@@ -234,11 +224,11 @@ def main() -> None:
             response = requests.get(API_URL + '/api/devices')
             if 200 <= response.status_code < 400:
                 for device_data in response.json():
-                    try:
+                    success, reason = validate_new_device_data(device_data)
+                    if success:
                         create_device(device_data=device_data)
-                    except ValueError as e:
-                        logger.error(f"Failed to create device {device_data}, error: {str(e)}")
-                        continue
+                    else:
+                        logger.error(f"Failed to create device, reason: {reason}")
                 break
             else:
                 delay = 2 ** attempt + random.random()
@@ -256,12 +246,12 @@ def main() -> None:
         logger.error("Failed to fetch devices. Shutting down.")
         sys.exit(1)
 
-    mqtt_client.connect_async(BROKER_HOST, BROKER_PORT, 60)
     mqtt_client.loop_start()
+    mqtt_client.connect_async(BROKER_HOST, BROKER_PORT, 60)
 
     while True:
         sleep(2)
-        for device in devices:
+        for device in devices.values():
             device.tick()
 
 

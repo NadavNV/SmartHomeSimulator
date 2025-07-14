@@ -102,22 +102,16 @@ class Device:
 
     def update(self, new_values: Mapping[str, Any]) -> None:
         for key, value in new_values.items():
-            if key in GENERAL_PARAMETERS:
-                try:
-                    match key:
-                        case "room":
-                            self.room = value
-                        case "name":
-                            self.name = value
-                        case "status":
-                            self.status = value
-                        case "parameters":
-                            self.update_parameters(value)
-                    self._logger.info(f"Setting parameter '{key}' to value '{value}'")
-                except ValueError:
-                    self._logger.exception(f"Incorrect value {value} for parameter {key}")
-            else:
-                raise ValueError(f"Incorrect parameter {key}")
+            self._logger.info(f"Setting parameter '{key}' to value '{value}'")
+            match key:
+                case "room":
+                    self.room = value
+                case "name":
+                    self.name = value
+                case "status":
+                    self.status = value
+                case "parameters":
+                    self.update_parameters(value)
 
     def update_parameters(self, new_values: Mapping[str, Any]):
         raise NotImplementedError()

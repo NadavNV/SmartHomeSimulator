@@ -26,6 +26,35 @@ PARAMETERS: set[str] = set(json.loads(os.getenv("LIGHT_PARAMETERS", '["brightnes
 
 
 class Light(Device):
+    """
+    Represents a smart light device with optional dimming and color-changing capabilities.
+
+    Inherits from the base ``Device`` class and adds functionality specific to smart lights,
+    such as brightness adjustment and color control.
+
+    :param device_id: Unique identifier for the device.
+    :type device_id: str
+    :param room: Room where the device is located.
+    :type room: str
+    :param name: Human-readable name of the device.
+    :type name: str
+    :param mqtt_client: MQTT client instance for communication.
+    :type mqtt_client: paho.mqtt.client.Client
+    :param logger: Logger instance for logging device activity.
+    :type logger: logging.Logger
+    :param status: Initial status of the light (default is "off").
+    :type status: str
+    :param is_dimmable: Whether the light supports dimming.
+    :type is_dimmable: bool
+    :param brightness: Initial brightness level (must be within allowed range).
+    :type brightness: int
+    :param dynamic_color: Whether the light supports dynamic color changes.
+    :type dynamic_color: bool
+    :param color: Initial color of the light in hex format (e.g., "#FFFFFF").
+    :type color: str
+
+    :raises ValueError: If brightness is out of range or color is not a valid hex code.
+    """
     def __init__(
             self,
             device_id: str,
@@ -61,14 +90,24 @@ class Light(Device):
 
     @property
     def is_dimmable(self) -> bool:
-        return self._is_dimmable
+        """
+        Indicates whether the light supports dimming.
 
-    @is_dimmable.setter
-    def is_dimmable(self, value: bool) -> None:
-        self._is_dimmable = value
+        :return: True if the light is dimmable, False otherwise.
+        :rtype: bool
+        """
+        return self._is_dimmable
 
     @property
     def brightness(self) -> int:
+        """
+        Gets or sets the brightness level of the light.
+
+        :return: Current brightness value.
+        :rtype: int
+
+        :raises ValueError: If brightness is out of valid range.
+        """
         return self._brightness
 
     @brightness.setter
@@ -80,14 +119,24 @@ class Light(Device):
 
     @property
     def dynamic_color(self) -> bool:
-        return self._dynamic_color
+        """
+        Indicates whether the light supports dynamic color changes.
 
-    @dynamic_color.setter
-    def dynamic_color(self, value: bool) -> None:
-        self._dynamic_color = value
+        :return: True if the light supports dynamic color, False otherwise.
+        :rtype: bool
+        """
+        return self._dynamic_color
 
     @property
     def color(self) -> str:
+        """
+        Gets or sets the current color of the light.
+
+        :return: Hex color string (e.g., "#FFFFFF").
+        :rtype: str
+
+        :raises ValueError: If the color is not a valid hex code.
+        """
         return self._color
 
     @color.setter
@@ -100,9 +149,14 @@ class Light(Device):
     @override
     def tick(self) -> None:
         """
-        Actions to perform on every iteration of the main loop.
-        - Randomly apply change
-        - Publish changes to MQTT
+        Periodically called method to simulate state changes in the light.
+
+        With a fixed probability, randomly changes one of the following attributes:
+        - ``status`` (on/off)
+        - ``brightness`` (if dimmable)
+        - ``color`` (if dynamic color enabled)
+
+        Changes are published to the MQTT broker.
         """
         update = {}
         random.seed()
@@ -132,20 +186,22 @@ class Light(Device):
 
     @override
     def update_parameters(self, new_values: Mapping[str, Any]) -> None:
+        """
+        Updates one or more parameters of the light from an external source.
+
+        Valid keys in ``new_values`` include:
+        - ``brightness``
+        - ``color``
+
+        :param new_values: Dictionary mapping parameter names to new values.
+        :type new_values: Mapping[str, Any]
+
+        :raises ValueError: If a parameter is invalid or its value is incorrect.
+        """
         for key, value in new_values.items():
-            if key in PARAMETERS:
-                try:
-                    match key:
-                        case "brightness":
-                            self.brightness = value
-                        case "color":
-                            self.color = value
-                        case "is_dimmable":
-                            self.is_dimmable = value
-                        case "dynamic_color":
-                            self.color = value
-                    self._logger.info(f"Setting parameter '{key}' to value '{value}'")
-                except ValueError:
-                    self._logger.exception(f"Incorrect value {value} for parameter {key}")
-            else:
-                raise ValueError(f"Incorrect parameter {key} for device type {self.type.value}")
+            self._logger.info(f"Setting parameter '{key}' to value '{value}'")
+            match key:
+                case "brightness":
+                    self.brightness = value
+                case "color":
+                    self.color = value
