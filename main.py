@@ -14,11 +14,29 @@ import random
 from device import Device
 from device_types import DeviceType
 
-from air_conditioner import AirConditioner, Mode, FanSpeed, Swing
-from light import Light
-from curtain import Curtain
-from door_lock import DoorLock
-from water_heater import WaterHeater
+from devices.air_conditioner import AirConditioner, Mode, FanSpeed, Swing
+from devices.light import Light
+from devices.curtain import Curtain
+from devices.door_lock import DoorLock
+from devices.water_heater import WaterHeater
+
+from validation.validators import validate_new_device_data, validate_device_data
+
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
+    handlers=[
+        # Prints to sys.stderr
+        logging.StreamHandler(),
+        # Writes to a log file which rotates every 1mb, or gets overwritten when the app is restarted
+        logging.handlers.RotatingFileHandler(
+            filename="simulator.log",
+            mode='w',
+            maxBytes=1024 * 1024,
+            backupCount=3
+        )
+    ],
+    level=logging.INFO,
+)
 
 BROKER_HOST = os.getenv("BROKER_HOST", "test.mosquitto.org")
 BROKER_PORT = int(os.getenv("BROKER_PORT", 1883))
@@ -33,13 +51,11 @@ logger = logging.getLogger(__name__)
 
 
 def create_device(device_data: dict) -> None:
-    required_fields = {'id', 'room', 'name', 'type'}
-    if not required_fields <= device_data.keys():
-        logger.error(f"Missing required field(s): {required_fields - device_data.keys()} ")
-        return
+    success, reason = validate_new_device_data(device_data)
+    if not success:
+        raise ValueError(reason)
     if id_exists(device_data["id"]):
-        logger.error("ID already exists")
-        return
+        raise ValueError(f"ID {device_data["id"]} already exists")
     kwargs = {
         'device_id': device_data['id'],
         'room': device_data['room'],
@@ -50,68 +66,41 @@ def create_device(device_data: dict) -> None:
     parameters = device_data.get("parameters", {})
     if 'status' in device_data:
         kwargs['status'] = device_data['status']
-    try:
-        match device_data['type']:
-            case DeviceType.WATER_HEATER:
-                if 'temperature' in parameters:
-                    kwargs['temperature'] = parameters['temperature']
-                if 'target_temperature' in parameters:
-                    kwargs['target_temperature'] = parameters['target_temperature']
-                if 'is_heating' in parameters:
-                    kwargs['is_heating'] = parameters['is_heating']
-                if 'timer_enabled' in parameters:
-                    kwargs['timer_enabled'] = parameters['timer_enabled']
-                if 'scheduled_on' in parameters:
-                    kwargs['scheduled_on'] = time.fromisoformat(
-                        WaterHeater.fix_time_string(parameters['scheduled_on'])
-                    )
-                if 'scheduled_off' in parameters:
-                    kwargs['scheduled_off'] = time.fromisoformat(
-                        WaterHeater.fix_time_string(parameters['scheduled_off'])
-                    )
-                new_device = WaterHeater(**kwargs)
-            case DeviceType.CURTAIN:
-                if 'position' in parameters:
-                    kwargs['position'] = parameters['position']
-                new_device = Curtain(**kwargs)
-            case DeviceType.DOOR_LOCK:
-                if 'auto_lock_enabled' in parameters:
-                    kwargs['auto_lock_enabled'] = parameters['auto_lock_enabled']
-                if 'battery_level' in parameters:
-                    kwargs['battery_level'] = parameters['battery_level']
-                new_device = DoorLock(**kwargs)
-            case DeviceType.LIGHT:
-                if 'is_dimmable' in parameters:
-                    kwargs['is_dimmable'] = parameters['is_dimmable']
-                if 'brightness' in parameters:
-                    kwargs['brightness'] = parameters['brightness']
-                if 'dynamic_color' in parameters:
-                    kwargs['dynamic_color'] = parameters['dynamic_color']
-                if 'color' in parameters:
-                    kwargs['color'] = parameters['color']
-                new_device = Light(**kwargs)
-            case DeviceType.AIR_CONDITIONER:
-                if 'temperature' in parameters:
-                    kwargs['temperature'] = parameters['temperature']
-                if 'mode' in parameters:
-                    kwargs['mode'] = Mode(parameters['mode'])
-                if 'fan_speed' in parameters:
-                    kwargs['fan_speed'] = FanSpeed(parameters['fan_speed'])
-                if 'swing' in parameters:
-                    kwargs['swing'] = Swing(parameters['swing'])
-                new_device = AirConditioner(**kwargs)
-            case _:
-                logger.error(f"Unknown device type {device_data['type']}")
-                return
-        if new_device is not None:
-            devices.append(new_device)
-            logger.info("Device added successfully")
-            return
-        else:
-            logger.error(f"Failed to create device {device_data['id']}")
-            return
-    except ValueError:
-        logger.exception(f"Failed to create device {device_data['id']}")
+    kwargs.update(parameters)
+    match device_data['type']:
+        case DeviceType.WATER_HEATER:
+            if 'scheduled_on' in kwargs:
+                kwargs['scheduled_on'] = time.fromisoformat(
+                    WaterHeater.fix_time_string(kwargs['scheduled_on'])
+                )
+            if 'scheduled_off' in kwargs:
+                kwargs['scheduled_off'] = time.fromisoformat(
+                    WaterHeater.fix_time_string(kwargs['scheduled_off'])
+                )
+            new_device = WaterHeater(**kwargs)
+        case DeviceType.CURTAIN:
+            new_device = Curtain(**kwargs)
+        case DeviceType.DOOR_LOCK:
+            new_device = DoorLock(**kwargs)
+        case DeviceType.LIGHT:
+            new_device = Light(**kwargs)
+        case DeviceType.AIR_CONDITIONER:
+            if 'mode' in kwargs:
+                kwargs['mode'] = Mode(kwargs['mode'])
+            if 'fan_speed' in kwargs:
+                kwargs['fan_speed'] = FanSpeed(kwargs['fan_speed'])
+            if 'swing' in kwargs:
+                kwargs['swing'] = Swing(kwargs['swing'])
+            new_device = AirConditioner(**kwargs)
+        case _:
+            raise ValueError(f"Unknown device type {device_data['type']}")
+    if new_device is not None:
+        devices.append(new_device)
+        logger.info("Device added successfully")
+        return
+    else:
+        logger.error(f"Failed to create device {device_data['id']}")
+        return
 
 
 # Checks the validity of the device id
@@ -179,6 +168,7 @@ def on_message(
             device_id = topic_parts[2]
             method = topic_parts[-1]
             match method:
+                # TODO: Add validation
                 case "update":
                     for device in devices:
                         if device.id == device_id:
@@ -235,21 +225,7 @@ def shutdown() -> None:
 def main() -> None:
     with open("./status", "w") as file:
         file.write("healthy\n")
-    logging.basicConfig(
-        format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
-        handlers=[
-            # Prints to sys.stderr
-            logging.StreamHandler(),
-            # Writes to a log file which rotates every 1mb, or gets overwritten when the app is restarted
-            logging.handlers.RotatingFileHandler(
-                filename="simulator.log",
-                mode='w',
-                maxBytes=1024 * 1024,
-                backupCount=3
-            )
-        ],
-        level=logging.INFO,
-    )
+
     logger.info("Starting SmartHomeSimulator")
 
     logger.info("Fetching devices . . .")
@@ -258,7 +234,11 @@ def main() -> None:
             response = requests.get(API_URL + '/api/devices')
             if 200 <= response.status_code < 400:
                 for device_data in response.json():
-                    create_device(device_data=device_data)
+                    try:
+                        create_device(device_data=device_data)
+                    except ValueError as e:
+                        logger.error(f"Failed to create device {device_data}, error: {str(e)}")
+                        continue
                 break
             else:
                 delay = 2 ** attempt + random.random()
