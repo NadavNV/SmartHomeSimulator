@@ -1,10 +1,10 @@
 import logging
 from enum import auto, StrEnum
-from typing import override
+from typing import Any, Mapping, override
 import random
 import paho.mqtt.client as paho
 
-from device import Device, CHANCE_TO_CHANGE, GENERAL_PARAMETERS
+from device import Device, CHANCE_TO_CHANGE
 from device_types import DeviceType
 
 
@@ -118,50 +118,43 @@ class AirConditioner(Device):
         - Randomly apply change
         - Publish changes to MQTT
         """
-        action_parameters = {}
-        update_parameters = {}
+        update = {}
         random.seed()
         if random.random() < CHANCE_TO_CHANGE:
             element_to_change = random.choice(['status', 'temperature', 'mode', 'fan_speed', 'swing'])
             match element_to_change:
                 case 'status':
-                    update_parameters['status'] = self.status = 'on' if self.status == 'off' else 'off'
+                    update['status'] = self.status = 'on' if self.status == 'off' else 'off'
                 case 'temperature':
                     next_temperature = self.temperature
                     while next_temperature == self.temperature:
                         next_temperature = random.randint(MIN_TEMPERATURE, MAX_TEMPERATURE)
-                    action_parameters['temperature'] = self.temperature = next_temperature
+                    update.setdefault('parameters', {})['temperature'] = self.temperature = next_temperature
                 case 'mode':
                     next_mode = self.mode
                     while next_mode == self.mode:
                         next_mode = random.choice(list(Mode))
-                    action_parameters['mode'] = self.mode = next_mode
+                    update.setdefault('parameters', {})['mode'] = self.mode = next_mode
                 case 'fan_speed':
                     next_speed = self.fan_speed
                     while next_speed == self.fan_speed:
                         next_speed = random.choice(list(FanSpeed))
-                    action_parameters['fan_speed'] = self.fan_speed = next_speed
+                    update.setdefault('parameters', {})['fan_speed'] = self.fan_speed = next_speed
                 case 'swing':
                     next_swing = self.swing
                     while next_swing == self.swing:
                         next_swing = random.choice(list(Swing))
-                    action_parameters['swing'] = self.swing = next_swing
+                    update.setdefault('parameters', {})['swing'] = self.swing = next_swing
                 case _:
                     print(f"Unknown element {element_to_change}")
-        self.publish_mqtt(action_parameters, update_parameters)
+        self.publish_mqtt(update)
 
     @override
-    def update(self, new_values: dict) -> None:
+    def update_parameters(self, new_values: Mapping[str, Any]) -> None:
         for key, value in new_values.items():
-            if key in PARAMETERS + GENERAL_PARAMETERS:
+            if key in PARAMETERS:
                 try:
                     match key:
-                        case "room":
-                            self.room = value
-                        case "name":
-                            self.name = value
-                        case "status":
-                            self.status = value
                         case "temperature":
                             self.temperature = value
                         case "mode":

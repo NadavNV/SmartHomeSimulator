@@ -1,10 +1,10 @@
 import re
 import logging
-from typing import override
+from typing import Any, Mapping, override
 import random
 import paho.mqtt.client as paho
 
-from device import Device, CHANCE_TO_CHANGE, GENERAL_PARAMETERS
+from device import Device, CHANCE_TO_CHANGE
 from device_types import DeviceType
 
 DEFAULT_DIMMABLE = False
@@ -102,8 +102,7 @@ class Light(Device):
         - Randomly apply change
         - Publish changes to MQTT
         """
-        action_parameters = {}
-        update_parameters = {}
+        update = {}
         random.seed()
         if random.random() < CHANCE_TO_CHANGE:
             elements = ['status']
@@ -114,33 +113,27 @@ class Light(Device):
             element_to_change = random.choice(elements)
             match element_to_change:
                 case 'status':
-                    update_parameters['status'] = self.status = 'on' if self.status == 'off' else 'off'
+                    update['status'] = self.status = 'on' if self.status == 'off' else 'off'
                 case 'brightness':
                     next_brightness = self.brightness
                     while next_brightness == self.brightness:
                         next_brightness = random.randint(MIN_BRIGHTNESS, MAX_BRIGHTNESS)
-                    action_parameters['brightness'] = self.brightness = next_brightness
+                    update.setdefault('parameters', {})['brightness'] = self.brightness = next_brightness
                 case 'color':
                     next_color = int('0x' + self.color[1:], 16)
                     while next_color == int('0x' + self.color[1:], 16):
                         next_color = random.randrange(0, 2 ** 24)
-                    action_parameters['color'] = self.color = "#" + hex(next_color)[2:]
+                    update.setdefault('parameters', {})['color'] = self.color = "#" + hex(next_color)[2:].zfill(6)
                 case _:
                     print(f"Unknown element {element_to_change}")
-        self.publish_mqtt(action_parameters, update_parameters)
+        self.publish_mqtt(update)
 
     @override
-    def update(self, new_values: dict) -> None:
+    def update_parameters(self, new_values: Mapping[str, Any]) -> None:
         for key, value in new_values.items():
-            if key in PARAMETERS + GENERAL_PARAMETERS:
+            if key in PARAMETERS:
                 try:
                     match key:
-                        case "room":
-                            self.room = value
-                        case "name":
-                            self.name = value
-                        case "status":
-                            self.status = value
                         case "brightness":
                             self.brightness = value
                         case "color":

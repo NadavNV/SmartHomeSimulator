@@ -179,7 +179,7 @@ def on_message(
             device_id = topic_parts[2]
             method = topic_parts[-1]
             match method:
-                case "action" | "update":
+                case "update":
                     for device in devices:
                         if device.id == device_id:
                             try:

@@ -5,12 +5,14 @@ import paho.mqtt.client as paho
 from paho.mqtt.properties import Properties
 from paho.mqtt.packettypes import PacketTypes
 from device_types import DeviceType
+from typing import Any, Mapping
 
 CHANCE_TO_CHANGE = 0.01
 GENERAL_PARAMETERS: list[str] = [
     "room",
     "name",
-    "status"
+    "status",
+    "parameters"
 ]
 
 
@@ -88,25 +90,37 @@ class Device:
 
     def tick(self) -> None:
         """
-        Actions to perform on every iteration of the main loop
+        Actions to perform on every iteration of the main loop. raises NotImplementedError()
         """
         raise NotImplementedError()
 
-    def publish_mqtt(self, action_parameters: dict, update_parameters) -> None:
+    def publish_mqtt(self, update: Mapping[str, Any]) -> None:
         topic = f"nadavnv-smart-home/devices{self.id}"
         properties = Properties(PacketTypes.PUBLISH)
-        properties.UserProperty = [("sender_id", client_id)]
-        # TODO: fold action into update
-        if action_parameters:
-            payload = json.dumps({
-                "contents": action_parameters,
-            })
-            self._mqtt_client.publish(topic + "/action", payload.encode(), qos=2, properties=properties)
-        if update_parameters:
-            payload = json.dumps({
-                "contents": update_parameters,
-            })
-            self._mqtt_client.publish(topic + "/update", payload.encode(), qos=2, properties=properties)
+        properties.UserProperty = [("sender_id", client_id), ("sender_group", "simulator")]
+        payload = json.dumps({
+            "contents": update,
+        })
+        self._mqtt_client.publish(topic + "/action", payload.encode(), qos=2, properties=properties)
 
-    def update(self, new_values: dict) -> None:
+    def update(self, new_values: Mapping[str, Any]) -> None:
+        for key, value in new_values.items():
+            if key in GENERAL_PARAMETERS:
+                try:
+                    match key:
+                        case "room":
+                            self.room = value
+                        case "name":
+                            self.name = value
+                        case "status":
+                            self.status = value
+                        case "parameters":
+                            self.update_parameters(value)
+                    self._logger.info(f"Setting parameter '{key}' to value '{value}'")
+                except ValueError:
+                    self._logger.exception(f"Incorrect value {value} for parameter {key}")
+            else:
+                raise ValueError(f"Incorrect parameter {key}")
+
+    def update_parameters(self, new_values: Mapping[str, Any]):
         raise NotImplementedError()

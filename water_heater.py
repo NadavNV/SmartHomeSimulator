@@ -1,11 +1,11 @@
 import random
 import logging
+from typing import Any, Mapping, override
 from datetime import datetime, time, timedelta
-from typing import override
 
 import paho.mqtt.client as paho
 
-from device import Device, CHANCE_TO_CHANGE, GENERAL_PARAMETERS
+from device import Device, CHANCE_TO_CHANGE
 from device_types import DeviceType
 
 # Celsius
@@ -122,15 +122,14 @@ class WaterHeater(Device):
         - Randomly apply change
         - Publish changes to MQTT
         """
-        action_parameters = {}
-        update_parameters = {}
+        update = {}
         # Adjusting temperature
         if self.is_heating:
             self._temperature += HEATING_RATE
-            action_parameters['temperature'] = self.temperature
+            update.setdefault('parameters', {})['temperature'] = self.temperature
         elif self._temperature > ROOM_TEMPERATURE:
             self._temperature -= HEATING_RATE
-            action_parameters['temperature'] = self.temperature
+            update.setdefault('parameters', {})['temperature'] = self.temperature
         # Adjusting status
         if self.timer_enabled:
             delta = timedelta(seconds=5)
@@ -139,19 +138,19 @@ class WaterHeater(Device):
                     self.status == "off" and
                     (now - delta <= datetime.combine(now.date(), self.scheduled_on) <= now + delta)
             ):
-                update_parameters['status'] = self.status = "on"
+                update['status'] = self.status = "on"
             elif (
                     self.status == "on" and
                     (now - delta <= datetime.combine(now.date(), self.scheduled_off) <= now + delta)
             ):
-                update_parameters['status'] = self.status = "off"
+                update['status'] = self.status = "off"
         # Adjusting is_heating
         if self.is_heating:
             self._logger.info("Is heating")
             if self.temperature >= self.target_temperature or self.status == "off":
-                action_parameters["is_heating"] = self._is_heating = False
+                update.setdefault('parameters', {})["is_heating"] = self._is_heating = False
         elif self.status == "on" and self.temperature < self.target_temperature:
-            action_parameters["is_heating"] = self._is_heating = True
+            update.setdefault('parameters', {})["is_heating"] = self._is_heating = True
         # Random change
         random.seed()
         if random.random() < CHANCE_TO_CHANGE:
@@ -160,14 +159,15 @@ class WaterHeater(Device):
             )
             match element_to_change:
                 case 'status':
-                    update_parameters['status'] = self.status = 'on' if self.status == 'off' else 'off'
+                    update['status'] = self.status = 'on' if self.status == 'off' else 'off'
                 case 'target_temperature':
                     next_temperature = self.target_temperature
                     while next_temperature == self.target_temperature:
                         next_temperature = random.randint(MIN_TEMPERATURE, MAX_TEMPERATURE)
-                    action_parameters['target_temperature'] = self.target_temperature = next_temperature
+                    update.setdefault('parameters', {})[
+                        'target_temperature'] = self.target_temperature = next_temperature
                 case 'timer_enabled':
-                    action_parameters['timer_enabled'] = self.timer_enabled = not self.timer_enabled
+                    update.setdefault('parameters', {})['timer_enabled'] = self.timer_enabled = not self.timer_enabled
                 case 'scheduled_on':
                     next_time = self.scheduled_on
                     while next_time == self.scheduled_on:
@@ -176,7 +176,7 @@ class WaterHeater(Device):
                             minute=random.randint(0, 59),
                         )
                     self.scheduled_on = next_time
-                    action_parameters['scheduled_on'] = self.fix_time_string(
+                    update.setdefault('parameters', {})['scheduled_on'] = self.fix_time_string(
                         str(self.scheduled_on.hour).zfill(2) + ':' + str(self.scheduled_on.minute).zfill(2))
                 case 'scheduled_off':
                     next_time = self.scheduled_off
@@ -186,25 +186,19 @@ class WaterHeater(Device):
                             minute=random.randint(0, 59),
                         )
                     self.scheduled_off = next_time
-                    action_parameters['scheduled_off'] = self.fix_time_string(
+                    update.setdefault('parameters', {})['scheduled_off'] = self.fix_time_string(
                         str(self.scheduled_off.hour).zfill(2) + ':' + str(self.scheduled_off.minute).zfill(2))
                 case _:
                     print(f"Unknown element {element_to_change}")
         # Publish changes
-        self.publish_mqtt(action_parameters, update_parameters)
+        self.publish_mqtt(update)
 
     @override
-    def update(self, new_values: dict) -> None:
+    def update_parameters(self, new_values: Mapping[str, Any]) -> None:
         for key, value in new_values.items():
-            if key in PARAMETERS + GENERAL_PARAMETERS:
+            if key in PARAMETERS:
                 try:
                     match key:
-                        case "room":
-                            self.room = value
-                        case "name":
-                            self.name = value
-                        case "status":
-                            self.status = value
                         case "target_temperature":
                             self.target_temperature = value
                         case "timer_enabled":

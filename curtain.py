@@ -1,9 +1,9 @@
-from typing import override
+from typing import Any, Mapping, override
 import random
 import logging
 import paho.mqtt.client as paho
 
-from device import Device, CHANCE_TO_CHANGE, GENERAL_PARAMETERS
+from device import Device, CHANCE_TO_CHANGE
 from device_types import DeviceType
 
 DEFAULT_POSITION = 100
@@ -56,35 +56,20 @@ class Curtain(Device):
         - Randomly apply status change
         - Publish changes to MQTT
         """
-        action_parameters = {}
-        update_parameters = {}
+        update = {}
         # Adjust position
         if self.position > MIN_POSITION and self.status == "open":
             self.position -= POSITION_RATE
-            action_parameters['position'] = self.position
+            update.setdefault('parameters', {})['position'] = self.position
         if self.position < MAX_POSITION and self.status == "closed":
             self.position += POSITION_RATE
-            action_parameters['position'] = self.position
+            update.setdefault('parameters', {})['position'] = self.position
         # Randomly lock or unlock
         random.seed()
         if random.random() < CHANCE_TO_CHANGE:
-            update_parameters['status'] = self.status = "closed" if self.status == "open" else "open"
-        self.publish_mqtt(action_parameters, update_parameters)
+            update['status'] = self.status = "closed" if self.status == "open" else "open"
+        self.publish_mqtt(update)
 
     @override
-    def update(self, new_values: dict) -> None:
-        for key, value in new_values.items():
-            if key in GENERAL_PARAMETERS:
-                try:
-                    match key:
-                        case "room":
-                            self.room = value
-                        case "name":
-                            self.name = value
-                        case "status":
-                            self.status = value
-                    self._logger.info(f"Setting parameter '{key}' to value '{value}'")
-                except ValueError:
-                    self._logger.exception(f"Incorrect value {value} for parameter {key}")
-            else:
-                raise ValueError(f"Incorrect parameter {key} for device type {self.type.value}")
+    def update_parameters(self, new_values: Mapping[str, Any]) -> None:
+        pass

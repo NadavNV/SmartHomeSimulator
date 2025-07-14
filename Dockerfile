@@ -7,7 +7,6 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY *.py .
-
-COPY data.json .
+COPY config/ config/
 
 CMD ["python", "main.py"]

@@ -1,9 +1,9 @@
-from typing import override
+from typing import Any, Mapping, override
 import random
 import logging
 import paho.mqtt.client as paho
 
-from device import Device, CHANCE_TO_CHANGE, GENERAL_PARAMETERS
+from device import Device, CHANCE_TO_CHANGE
 from device_types import DeviceType
 
 DEFAULT_AUTO_LOCK = False
@@ -71,33 +71,26 @@ class DoorLock(Device):
         - Randomly apply status change
         - Publish changes to MQTT
         """
-        action_parameters = {}
-        update_parameters = {}
+        update = {}
         # Drain battery
         if self.battery_level >= MIN_BATTERY:
             try:
                 self.battery_level -= BATTERY_DRAIN
             except ValueError:
                 self.battery_level = MAX_BATTERY
-        action_parameters['battery_level'] = self.battery_level
+        update.setdefault('parameters', {})['battery_level'] = self.battery_level
         # Randomly lock or unlock
         random.seed()
         if random.random() < CHANCE_TO_CHANGE:
-            update_parameters['status'] = self.status = "locked" if self.status == "unlocked" else "unlocked"
-        self.publish_mqtt(action_parameters, update_parameters)
+            update['status'] = self.status = "locked" if self.status == "unlocked" else "unlocked"
+        self.publish_mqtt(update)
 
     @override
-    def update(self, new_values: dict) -> None:
+    def update_parameters(self, new_values: Mapping[str, Any]) -> None:
         for key, value in new_values.items():
-            if key in PARAMETERS + GENERAL_PARAMETERS:
+            if key in PARAMETERS:
                 try:
                     match key:
-                        case "room":
-                            self.room = value
-                        case "name":
-                            self.name = value
-                        case "status":
-                            self.status = value
                         case "auto_lock_enabled":
                             self.auto_lock_enabled = value
                     self._logger.info(f"Setting parameter '{key}' to value '{value}'")
