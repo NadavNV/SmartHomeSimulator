@@ -64,10 +64,20 @@ class WaterHeater(Device):
     def fix_time_string(string: str) -> str:
         if ":" not in string:
             raise ValueError(f"Invalid time string: {string}")
-        hours, minutes = string.split(":")
-        hours = hours.zfill(2)
-        minutes = minutes.zfill(2)
-        return f"{hours}:{minutes}"
+        string = string.split(":")
+        if len(string) == 2:
+            hours, minutes = string
+            hours = hours.zfill(2)
+            minutes = minutes.zfill(2)
+            return f"{hours}:{minutes}"
+        elif len(string) == 3:
+            hours, minutes, seconds = string
+            hours = hours.zfill(2)
+            minutes = minutes.zfill(2)
+            seconds = seconds.zfill(2)
+            return f"{hours}:{minutes}:{seconds}"
+        else:
+            raise ValueError(f"Invalid time string: {string}")
 
     @property
     def temperature(self) -> int:

@@ -124,7 +124,7 @@ class Light(Device):
                     next_color = int('0x' + self.color[1:], 16)
                     while next_color == int('0x' + self.color[1:], 16):
                         next_color = random.randrange(0, 2 ** 24)
-                    action_parameters['color'] = self.color = "#" + hex(next_color)[2:]
+                    action_parameters['color'] = self.color = "#" + hex(next_color)[2:].zfill(6)
                 case _:
                     print(f"Unknown element {element_to_change}")
         self.publish_mqtt(action_parameters, update_parameters)
