@@ -1,4 +1,6 @@
+import config.env  # noqa: F401  # load_dotenv side effect
 import logging
+import os
 from enum import auto, StrEnum
 from typing import Any, Mapping, override
 import random
@@ -27,11 +29,12 @@ class Swing(StrEnum):
     AUTO = auto()
 
 
-# Celsius
-DEFAULT_TEMPERATURE = 24
-MIN_TEMPERATURE = 16
-MAX_TEMPERATURE = 30
+# Minimum temperature (Celsius) for air conditioner
+MIN_AC_TEMP = int(os.getenv('VITE_MIN_AC_TEMP', 16))
+# Maximum temperature (Celsius) for air conditioner
+MAX_AC_TEMP = int(os.getenv('VITE_MAX_AC_TEMP', 30))
 
+DEFAULT_TEMPERATURE = 24
 DEFAULT_MODE = Mode.COOL
 DEFAULT_FAN = FanSpeed.MEDIUM
 DEFAULT_SWING = Swing.OFF
@@ -68,10 +71,10 @@ class AirConditioner(Device):
             status=status,
             logger=logger,
         )
-        if MIN_TEMPERATURE <= temperature <= MAX_TEMPERATURE:
+        if MIN_AC_TEMP <= temperature <= MAX_AC_TEMP:
             self._temperature: int = temperature
         else:
-            raise ValueError(f"Temperature must be between {MIN_TEMPERATURE} and {MAX_TEMPERATURE}")
+            raise ValueError(f"Temperature must be between {MIN_AC_TEMP} and {MAX_AC_TEMP}")
         self._mode: Mode = mode
         self._fan_speed: FanSpeed = fan_speed
         self._swing: Swing = swing
@@ -82,10 +85,10 @@ class AirConditioner(Device):
 
     @temperature.setter
     def temperature(self, temperature) -> None:
-        if MIN_TEMPERATURE <= temperature <= MAX_TEMPERATURE:
+        if MIN_AC_TEMP <= temperature <= MAX_AC_TEMP:
             self._temperature: int = temperature
         else:
-            raise ValueError(f"Temperature must be between {MIN_TEMPERATURE} and {MAX_TEMPERATURE}")
+            raise ValueError(f"Temperature must be between {MIN_AC_TEMP} and {MAX_AC_TEMP}")
 
     @property
     def mode(self) -> Mode:
@@ -128,7 +131,7 @@ class AirConditioner(Device):
                 case 'temperature':
                     next_temperature = self.temperature
                     while next_temperature == self.temperature:
-                        next_temperature = random.randint(MIN_TEMPERATURE, MAX_TEMPERATURE)
+                        next_temperature = random.randint(MIN_AC_TEMP, MAX_AC_TEMP)
                     update.setdefault('parameters', {})['temperature'] = self.temperature = next_temperature
                 case 'mode':
                     next_mode = self.mode

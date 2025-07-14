@@ -1,3 +1,4 @@
+import config.env  # noqa: F401  # load_dotenv side effect
 from typing import Any, Mapping, override
 import random
 import logging

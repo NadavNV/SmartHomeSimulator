@@ -1,4 +1,6 @@
+import config.env  # noqa: F401  # load_dotenv side effect
 import re
+import os
 import logging
 from typing import Any, Mapping, override
 import random
@@ -7,13 +9,16 @@ import paho.mqtt.client as paho
 from device import Device, CHANCE_TO_CHANGE
 from device_types import DeviceType
 
+
+# Minimum brightness for dimmable light
+MIN_BRIGHTNESS = int(os.getenv('VITE_MIN_BRIGHTNESS', 0))
+# Maximum brightness for dimmable light
+MAX_BRIGHTNESS = int(os.getenv("VITE_MAX_BRIGHTNESS", 100))
 DEFAULT_DIMMABLE = False
 DEFAULT_BRIGHTNESS = 80
-MIN_BRIGHTNESS = 0
-MAX_BRIGHTNESS = 100
 DEFAULT_DYNAMIC_COLOR = False
 DEFAULT_COLOR = "#FFFFFF"
-COLOR_REGEX = '^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$'
+COLOR_REGEX = os.getenv("VITE_COLOR_REGEX", '^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$')
 
 PARAMETERS: list[str] = [
     "brightness",

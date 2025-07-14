@@ -1,3 +1,5 @@
+import config.env  # noqa: F401  # load_dotenv side effect
+import os
 import random
 import logging
 from typing import Any, Mapping, override
@@ -8,9 +10,10 @@ import paho.mqtt.client as paho
 from device import Device, CHANCE_TO_CHANGE
 from device_types import DeviceType
 
-# Celsius
-MIN_TEMPERATURE = 49
-MAX_TEMPERATURE = 60
+# Minimum temperature (Celsius) for water heater
+MIN_WATER_TEMP = int(os.getenv('VITE_MIN_WATER_TEMP', 49))
+# Maximum temperature (Celsius) for water heater
+MAX_WATER_TEMP = int(os.getenv('VITE_MAX_WATER_TEMP', 60))
 ROOM_TEMPERATURE = 23
 HEATING_RATE = 1
 
@@ -35,7 +38,7 @@ class WaterHeater(Device):
             logger: logging.Logger,
             status: str = "off",
             temperature: int = ROOM_TEMPERATURE,
-            target_temperature: int = MIN_TEMPERATURE,
+            target_temperature: int = MIN_WATER_TEMP,
             is_heating: bool = False,
             timer_enabled: bool = False,
             scheduled_on: time = DEFAULT_SCHEDULED_ON,
@@ -51,10 +54,10 @@ class WaterHeater(Device):
             logger=logger,
         )
         self._temperature: int = temperature
-        if MIN_TEMPERATURE <= target_temperature <= MAX_TEMPERATURE:
+        if MIN_WATER_TEMP <= target_temperature <= MAX_WATER_TEMP:
             self._target_temperature = target_temperature
         else:
-            raise ValueError(f"Temperature must be between {MIN_TEMPERATURE} and {MAX_TEMPERATURE}")
+            raise ValueError(f"Temperature must be between {MIN_WATER_TEMP} and {MAX_WATER_TEMP}")
         self._is_heating: bool = is_heating
         self._timer_enabled: bool = timer_enabled
         self._scheduled_on: time = scheduled_on
@@ -64,10 +67,20 @@ class WaterHeater(Device):
     def fix_time_string(string: str) -> str:
         if ":" not in string:
             raise ValueError(f"Invalid time string: {string}")
-        hours, minutes = string.split(":")
-        hours = hours.zfill(2)
-        minutes = minutes.zfill(2)
-        return f"{hours}:{minutes}"
+        string = string.split(":")
+        if len(string) == 2:
+            hours, minutes = string
+            hours = hours.zfill(2)
+            minutes = minutes.zfill(2)
+            return f"{hours}:{minutes}"
+        elif len(string) == 3:
+            hours, minutes, seconds = string
+            hours = hours.zfill(2)
+            minutes = minutes.zfill(2)
+            seconds = seconds.zfill(2)
+            return f"{hours}:{minutes}:{seconds}"
+        else:
+            raise ValueError(f"Invalid time string: {string}")
 
     @property
     def temperature(self) -> int:
@@ -79,10 +92,10 @@ class WaterHeater(Device):
 
     @target_temperature.setter
     def target_temperature(self, value: int) -> None:
-        if MIN_TEMPERATURE <= value <= MAX_TEMPERATURE:
+        if MIN_WATER_TEMP <= value <= MAX_WATER_TEMP:
             self._target_temperature = value
         else:
-            raise ValueError(f"Temperature must be between {MIN_TEMPERATURE} and {MAX_TEMPERATURE}")
+            raise ValueError(f"Temperature must be between {MIN_WATER_TEMP} and {MAX_WATER_TEMP}")
 
     @property
     def is_heating(self) -> bool:
@@ -163,7 +176,7 @@ class WaterHeater(Device):
                 case 'target_temperature':
                     next_temperature = self.target_temperature
                     while next_temperature == self.target_temperature:
-                        next_temperature = random.randint(MIN_TEMPERATURE, MAX_TEMPERATURE)
+                        next_temperature = random.randint(MIN_WATER_TEMP, MAX_WATER_TEMP)
                     update.setdefault('parameters', {})[
                         'target_temperature'] = self.target_temperature = next_temperature
                 case 'timer_enabled':
