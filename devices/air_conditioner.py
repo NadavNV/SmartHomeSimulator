@@ -45,7 +45,33 @@ PARAMETERS: set[str] = set(json.loads(os.getenv("AC_PARAMETERS", "[\"temperature
 
 
 class AirConditioner(Device):
+    """
+    Represents a smart air conditioner device with adjustable parameters such as
+    temperature, mode, fan speed, and swing.
 
+    :param device_id: Unique identifier for the device.
+    :type device_id: str
+    :param room: The room in which the device is located.
+    :type room: str
+    :param name: Display name for the device.
+    :type name: str
+    :param mqtt_client: MQTT client instance for publishing/subscribing messages.
+    :type mqtt_client: paho.Client
+    :param logger: Logger instance for event logging.
+    :type logger: logging.Logger
+    :param status: Device power status, either "on" or "off".
+    :type status: str
+    :param temperature: Initial temperature setting in Celsius.
+    :type temperature: int
+    :param mode: Initial operation mode (cool, heat, fan).
+    :type mode: Mode
+    :param fan_speed: Initial fan speed setting.
+    :type fan_speed: FanSpeed
+    :param swing: Initial swing setting.
+    :type swing: Swing
+
+    :raises ValueError: If temperature is outside allowed range.
+    """
     def __init__(
             self,
             device_id: str,
@@ -78,6 +104,14 @@ class AirConditioner(Device):
 
     @property
     def temperature(self) -> int:
+        """
+        Gets or sets the temperature.
+
+        :return: Current temperature value.
+        :rtype: int
+
+        :raises ValueError: If temperature is out of valid range.
+        """
         return self._temperature
 
     @temperature.setter
@@ -89,6 +123,12 @@ class AirConditioner(Device):
 
     @property
     def mode(self) -> Mode:
+        """
+        Gets or sets the mode of the air conditioner.
+
+        :return: Current mode.
+        :rtype: Mode
+        """
         return self._mode
 
     @mode.setter
@@ -97,6 +137,12 @@ class AirConditioner(Device):
 
     @property
     def fan_speed(self) -> FanSpeed:
+        """
+        Gets or sets the fan speed of the air conditioner.
+
+        :return: Current fan speed.
+        :rtype: FanSpeed
+        """
         return self._fan_speed
 
     @fan_speed.setter
@@ -105,6 +151,12 @@ class AirConditioner(Device):
 
     @property
     def swing(self) -> Swing:
+        """
+        Gets or sets the swing mode of the air conditioner.
+
+        :return: Current swing mode.
+        :rtype: Swing
+        """
         return self._swing
 
     @swing.setter
@@ -114,9 +166,9 @@ class AirConditioner(Device):
     @override
     def tick(self) -> None:
         """
-        Actions to perform on every iteration of the main loop.
-        - Randomly apply change
-        - Publish changes to MQTT
+        Called on each simulation tick:
+        - Randomly changes one parameter (status, temperature, etc.)
+        - Publishes updated state to MQTT.
         """
         update = {}
         random.seed()
@@ -151,20 +203,20 @@ class AirConditioner(Device):
 
     @override
     def update_parameters(self, new_values: Mapping[str, Any]) -> None:
+        """
+        Updates device parameters from a given dictionary.
+
+        :param new_values: Dictionary containing parameter keys and values.
+        :raises ValueError: If any key or value is invalid for this device.
+        """
         for key, value in new_values.items():
-            if key in PARAMETERS:
-                try:
-                    match key:
-                        case "temperature":
-                            self.temperature = value
-                        case "mode":
-                            self.mode = Mode(value=value)
-                        case "fan_speed":
-                            self.fan_speed = FanSpeed(value=value)
-                        case "swing":
-                            self.swing = Swing(value=value)
-                    self._logger.info(f"Setting parameter '{key}' to value '{value}'")
-                except ValueError:
-                    self._logger.exception(f"Incorrect value {value} for parameter {key}")
-            else:
-                raise ValueError(f"Incorrect parameter {key} for device type {self.type.value}")
+            self._logger.info(f"Setting parameter '{key}' to value '{value}'")
+            match key:
+                case "temperature":
+                    self.temperature = value
+                case "mode":
+                    self.mode = Mode(value=value)
+                case "fan_speed":
+                    self.fan_speed = FanSpeed(value=value)
+                case "swing":
+                    self.swing = Swing(value=value)

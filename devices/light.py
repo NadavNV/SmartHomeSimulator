@@ -195,8 +195,6 @@ class Light(Device):
 
         :param new_values: Dictionary mapping parameter names to new values.
         :type new_values: Mapping[str, Any]
-
-        :raises ValueError: If a parameter is invalid or its value is incorrect.
         """
         for key, value in new_values.items():
             self._logger.info(f"Setting parameter '{key}' to value '{value}'")

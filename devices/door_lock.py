@@ -19,6 +19,28 @@ PARAMETERS: set[str] = set(json.loads(os.getenv("LOCK_PARAMETERS", '["auto_lock_
 
 
 class DoorLock(Device):
+    """
+    Represents a smart door lock, with a possible auto-lock feature.
+
+    :param device_id: Unique identifier for the device.
+    :type device_id: str
+    :param room: The room in which the device is located.
+    :type room: str
+    :param name: Display name for the device.
+    :type name: str
+    :param mqtt_client: MQTT client instance for publishing/subscribing messages.
+    :type mqtt_client: paho.Client
+    :param logger: Logger instance for event logging.
+    :type logger: logging.Logger
+    :param status: Current status ("unlocked" or "locked").
+    :type status: str
+    :param auto_lock_enabled: Whether the auto-lock feature is enabled initially.
+    :type auto_lock_enabled: bool
+    :param battery_level: Initial battery level percentage
+    :type battery_level: int
+
+    :raises ValueError: If battery level is outside allowed range.
+    """
     def __init__(
             self,
             device_id: str,
@@ -30,6 +52,7 @@ class DoorLock(Device):
             auto_lock_enabled: bool = DEFAULT_AUTO_LOCK,
             battery_level: int = DEFAULT_BATTERY,
     ):
+
         super().__init__(
             device_id=device_id,
             device_type=DeviceType.DOOR_LOCK,
@@ -47,6 +70,12 @@ class DoorLock(Device):
 
     @property
     def auto_lock_enabled(self) -> bool:
+        """
+        Get or set whether the auto-lock feature is currently enabled.
+
+        :return: True if currently enabled, False otherwise
+        :rtype: bool
+        """
         return self._auto_lock_enabled
 
     @auto_lock_enabled.setter
@@ -55,6 +84,12 @@ class DoorLock(Device):
 
     @property
     def battery_level(self) -> int:
+        """
+        Get or set the current battery level.
+
+        :return: Current battery level
+        :rtype: int
+        """
         return self._battery_level
 
     @battery_level.setter
@@ -89,13 +124,7 @@ class DoorLock(Device):
     @override
     def update_parameters(self, new_values: Mapping[str, Any]) -> None:
         for key, value in new_values.items():
-            if key in PARAMETERS:
-                try:
-                    match key:
-                        case "auto_lock_enabled":
-                            self.auto_lock_enabled = value
-                    self._logger.info(f"Setting parameter '{key}' to value '{value}'")
-                except ValueError:
-                    self._logger.exception(f"Incorrect value {value} for parameter {key}")
-            else:
-                raise ValueError(f"Incorrect parameter {key} for device type {self.type.value}")
+            self._logger.info(f"Setting parameter '{key}' to value '{value}'")
+            match key:
+                case "auto_lock_enabled":
+                    self.auto_lock_enabled = value

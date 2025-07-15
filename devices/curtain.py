@@ -15,6 +15,26 @@ POSITION_RATE: int = 1
 
 
 class Curtain(Device):
+    """
+    Represents a smart curtain device with position control and open/closed state.
+
+    :param device_id: Unique identifier for the curtain.
+    :type device_id: str
+    :param room: Room where the curtain is located.
+    :type room: str
+    :param name: Name of the curtain.
+    :type name: str
+    :param mqtt_client: MQTT client used for communication.
+    :type mqtt_client: paho.Client
+    :param logger: Logger for debugging and tracking state.
+    :type logger: logging.Logger
+    :param status: Current status ("open" or "closed").
+    :type status: str
+    :param position: Initial position of the curtain (0–100).
+    :type position: int
+
+    :raises ValueError: If initial position is out of allowed bounds.
+    """
     def __init__(
             self,
             device_id: str,
@@ -41,6 +61,14 @@ class Curtain(Device):
 
     @property
     def position(self) -> int:
+        """
+        Gets or sets the curtain's position.
+
+        :return: Current position.
+        :rtype: int
+
+        :raises ValueError: If position is out of valid range.
+        """
         return self._position
 
     @position.setter
@@ -53,10 +81,10 @@ class Curtain(Device):
     @override
     def tick(self) -> None:
         """
-        Actions to perform on every iteration of the main loop.
-        - Adjust position
-        - Randomly apply status change
-        - Publish changes to MQTT
+        Called on each simulation tick:
+        - Adjusts curtain position based on its open/closed status.
+        - Randomly toggles curtain status.
+        - Publishes updated state to MQTT.
         """
         update = {}
         # Adjust position
@@ -74,4 +102,7 @@ class Curtain(Device):
 
     @override
     def update_parameters(self, new_values: Mapping[str, Any]) -> None:
+        """
+        Placeholder for curtain parameter updates. Not implemented.
+        """
         pass

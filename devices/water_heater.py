@@ -26,6 +26,36 @@ PARAMETERS: set[str] = set(json.loads(os.getenv("WATER_HEATER_PARAMETERS", '["te
 
 
 class WaterHeater(Device):
+    """
+    Represents a smart water heater device with temperature control and scheduling.
+
+    :param device_id: Unique identifier for the heater.
+    :type device_id: str
+    :param room: Room where the heater is located.
+    :type room: str
+    :param name: Display name of the device.
+    :type name: str
+    :param mqtt_client: MQTT communication client.
+    :type mqtt_client: paho.Client
+    :param logger: Logger for status and errors.
+    :type logger: logging.Logger
+    :param status: Power status ("on" or "off").
+    :type status: str
+    :param temperature: Current water temperature.
+    :type temperature: int
+    :param target_temperature: Desired water temperature.
+    :type target_temperature: int
+    :param is_heating: Whether the heater is actively heating.
+    :type is_heating: bool
+    :param timer_enabled: Whether scheduled start/stop is active.
+    :type timer_enabled: bool
+    :param scheduled_on: Scheduled start time.
+    :type scheduled_on: time
+    :param scheduled_off: Scheduled stop time.
+    :type scheduled_off: time
+
+    :raises ValueError: If target_temperature is out of allowed range.
+    """
     def __init__(
             self,
             device_id: str,
@@ -62,6 +92,14 @@ class WaterHeater(Device):
 
     @staticmethod
     def fix_time_string(string: str) -> str:
+        """
+        Normalizes a time string to HH:MM or HH:MM:SS format.
+
+        :param string: Raw time string.
+        :return: Properly formatted time string.
+
+        :raises ValueError: If input format is invalid.
+        """
         if ":" not in string:
             raise ValueError(f"Invalid time string: {string}")
         string = string.split(":")
@@ -81,10 +119,24 @@ class WaterHeater(Device):
 
     @property
     def temperature(self) -> int:
+        """
+        Returns current water temperature. Read only.
+
+        :return: Current water temperature.
+        :rtype: int
+        """
         return self._temperature
 
     @property
     def target_temperature(self) -> int:
+        """
+        Gets and sets the desired temperature for the water heater.
+
+        :return: Current desired temperature
+        :rtype: int
+
+        :raises ValueError: If target temperature is out of valid range
+        """
         return self._target_temperature
 
     @target_temperature.setter
@@ -96,10 +148,22 @@ class WaterHeater(Device):
 
     @property
     def is_heating(self) -> bool:
+        """
+        Indicates whether the water is currently heating. Read only.
+
+        :return: True if water is currently heating, False otherwise.
+        :rtype: bool
+        """
         return self._is_heating
 
     @property
     def timer_enabled(self) -> bool:
+        """
+        Get or set whether scheduled start/stop is active.
+
+        :return: Whether scheduled start/stop is currently active
+        :rtype bool
+        """
         return self._timer_enabled
 
     @timer_enabled.setter
@@ -108,6 +172,12 @@ class WaterHeater(Device):
 
     @property
     def scheduled_on(self) -> time:
+        """
+        Get or set the time to turn on heating, if timer is enabled.
+
+        :return: Current scheduled start time.
+        :rtype: time
+        """
         return self._scheduled_on
 
     @scheduled_on.setter
@@ -116,6 +186,12 @@ class WaterHeater(Device):
 
     @property
     def scheduled_off(self) -> time:
+        """
+        Get or set the time to turn off heating, if timer is enabled.
+
+        :return: Current scheduled stop time.
+        :rtype: time
+        """
         return self._scheduled_off
 
     @scheduled_off.setter
@@ -125,12 +201,11 @@ class WaterHeater(Device):
     @override
     def tick(self) -> None:
         """
-        Actions to perform on every iteration of the main loop.
-        - Adjust temperature based on _is_heating
-        - Adjust status based on timer
-        - Adjust _is_heating based on status and target temperature
-        - Randomly apply change
-        - Publish changes to MQTT
+        Called on each simulation tick:
+        - Adjusts water temperature.
+        - Enables/disables heating based on schedule and target.
+        - Randomly updates parameters.
+        - Publishes updated state to MQTT.
         """
         update = {}
         # Adjusting temperature
@@ -205,20 +280,20 @@ class WaterHeater(Device):
 
     @override
     def update_parameters(self, new_values: Mapping[str, Any]) -> None:
+        """
+        Updates the heater’s parameters based on a dictionary input.
+
+        :param new_values: Mapping of parameter names to values.
+        :type new_values: Mapping[str, Any]
+        """
         for key, value in new_values.items():
-            if key in PARAMETERS:
-                try:
-                    match key:
-                        case "target_temperature":
-                            self.target_temperature = value
-                        case "timer_enabled":
-                            self.timer_enabled = value
-                        case "scheduled_on":
-                            self.scheduled_on = time.fromisoformat(self.fix_time_string(value))
-                        case "scheduled_off":
-                            self.scheduled_off = time.fromisoformat(self.fix_time_string(value))
-                    self._logger.info(f"Setting parameter '{key}' to value '{value}'")
-                except ValueError:
-                    self._logger.exception(f"Incorrect value {value} for parameter {key}")
-            else:
-                raise ValueError(f"Incorrect parameter {key} for device type {self.type.value}")
+            self._logger.info(f"Setting parameter '{key}' to value '{value}'")
+            match key:
+                case "target_temperature":
+                    self.target_temperature = value
+                case "timer_enabled":
+                    self.timer_enabled = value
+                case "scheduled_on":
+                    self.scheduled_on = time.fromisoformat(self.fix_time_string(value))
+                case "scheduled_off":
+                    self.scheduled_off = time.fromisoformat(self.fix_time_string(value))
