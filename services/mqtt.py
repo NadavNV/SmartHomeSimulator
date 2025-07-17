@@ -158,6 +158,10 @@ def get_mqtt() -> paho.Client:
     return mqtt_client
 
 
+def is_mqtt_connected() -> bool:
+    return mqtt_connected
+
+
 def publish_mqtt(device_id: str, update: Mapping[str, Any]) -> None:
     topic = f"{MQTT_TOPIC}/{device_id}/update"
     properties = Properties(PacketTypes.PUBLISH)

@@ -5,7 +5,7 @@ import os
 import atexit
 
 from core.device_utils import devices, load_devices
-from services.mqtt import init_mqtt, get_mqtt, mqtt_connected, MQTTNotInitializedError
+from services.mqtt import init_mqtt, get_mqtt, is_mqtt_connected, MQTTNotInitializedError
 
 logging.basicConfig(
     format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
@@ -47,7 +47,7 @@ def main() -> None:
     load_devices()
 
     init_mqtt()
-    while not mqtt_connected:
+    while not is_mqtt_connected():
         sleep(2)
     logger.info("Connected to MQTT")
 
