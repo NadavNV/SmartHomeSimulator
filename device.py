@@ -1,14 +1,16 @@
+import config.env  # noqa: F401  # load_dotenv side effect
 import json
 import logging
+import os
+from main import client_id
 import paho.mqtt.client as paho
+from paho.mqtt.properties import Properties
+from paho.mqtt.packettypes import PacketTypes
 from device_types import DeviceType
+from typing import Any, Mapping
 
-CHANCE_TO_CHANGE = 0.01
-GENERAL_PARAMETERS: list[str] = [
-    "room",
-    "name",
-    "status"
-]
+CHANCE_TO_CHANGE: float = 0.01
+GENERAL_PARAMETERS: set[str] = set(json.loads(os.getenv("DEVICE_PARAMETERS", '["room","name","status","parameters"]')))
 
 
 class Device:
@@ -85,24 +87,42 @@ class Device:
 
     def tick(self) -> None:
         """
-        Actions to perform on every iteration of the main loop
+        Actions to perform on every iteration of the main loop. raises NotImplementedError()
         """
         raise NotImplementedError()
 
-    def publish_mqtt(self, action_parameters: dict, update_parameters) -> None:
-        topic = f"project/home/{self.id}"
-        if action_parameters:
-            payload = json.dumps({
-                "sender": "simulator",
-                "contents": action_parameters,
-            })
-            self._mqtt_client.publish(topic + "/action", payload.encode(), qos=2)
-        if update_parameters:
-            payload = json.dumps({
-                "sender": "simulator",
-                "contents": update_parameters,
-            })
-            self._mqtt_client.publish(topic + "/update", payload.encode(), qos=2)
+    def publish_mqtt(self, update: Mapping[str, Any]) -> None:
+        topic = f"nadavnv-smart-home/devices{self.id}"
+        properties = Properties(PacketTypes.PUBLISH)
+        properties.UserProperty = [("sender_id", client_id), ("sender_group", "simulator")]
+        payload = json.dumps({
+            "contents": update,
+        })
+        self._mqtt_client.publish(topic + "/action", payload.encode(), qos=2, properties=properties)
 
-    def update(self, new_values: dict) -> None:
+    def update(self, new_values: Mapping[str, Any]) -> None:
+        for key, value in new_values.items():
+            self._logger.info(f"Setting parameter '{key}' to value '{value}'")
+            match key:
+                case "room":
+                    self.room = value
+                case "name":
+                    self.name = value
+                case "status":
+                    self.status = value
+                case "parameters":
+                    self.update_parameters(value)
+
+    def update_parameters(self, new_values: Mapping[str, Any]):
         raise NotImplementedError()
+
+    @staticmethod
+    def str_to_bool(string: str) -> bool:
+        """
+        Converts strings such as "false" or "True" to their equivalent boolean value.
+
+        :param str string: The string to convert
+        :return: The boolean value
+        :rtype: bool
+        """
+        return str(string).lower() == "true"
