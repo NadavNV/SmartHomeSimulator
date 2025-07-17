@@ -88,7 +88,7 @@ def load_devices():
                 break
             else:
                 delay = 2 ** attempt + random.random()
-                logger.error(f"Failed to get devices {response.status_code}, {response.text}.")
+                logger.error(f"Failed to get devices {response.status_code}.")
                 logger.error(f"{response.text}")
                 logger.error(f"Attempt {attempt + 1}/{RETRIES} failed. Retrying in {delay:.2f} seconds...")
                 sleep(delay)

@@ -5,7 +5,7 @@ import os
 import atexit
 
 from core.device_utils import devices, load_devices
-from services.mqtt import init_mqtt, get_mqtt, mqtt_connected
+from services.mqtt import init_mqtt, get_mqtt, mqtt_connected, MQTTNotInitializedError
 
 logging.basicConfig(
     format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
@@ -27,8 +27,11 @@ logger = logging.getLogger(__name__)
 
 @atexit.register
 def shutdown() -> None:
-    get_mqtt().loop_stop()
-    get_mqtt().disconnect()
+    try:
+        get_mqtt().loop_stop()
+        get_mqtt().disconnect()
+    except MQTTNotInitializedError:
+        logger.warning("MQTT not initialized")
     if os.path.exists("./status"):
         os.remove("./status")
     logger.info("Shutting down")
