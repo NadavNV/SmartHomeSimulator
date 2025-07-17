@@ -5,12 +5,6 @@ import random
 import logging
 from time import sleep
 from datetime import time
-from devices.device_types import DeviceType
-from devices.light import Light
-from devices.curtain import Curtain
-from devices.door_lock import DoorLock
-from devices.water_heater import WaterHeater
-from devices.air_conditioner import AirConditioner, Mode, FanSpeed, Swing
 from validation.validators import validate_device_data
 
 # How many times to attempt a connection request
@@ -24,6 +18,12 @@ logger = logging.getLogger("smart-home.core")
 
 # TODO: docstrings
 def create_device(device_data: dict) -> None:
+    from devices.device_types import DeviceType
+    from devices.light import Light
+    from devices.curtain import Curtain
+    from devices.door_lock import DoorLock
+    from devices.water_heater import WaterHeater
+    from devices.air_conditioner import AirConditioner, Mode, FanSpeed, Swing
     success, reasons = validate_device_data(device_data, new_device=True)
     if not success:
         raise ValueError(f"{reasons}")

@@ -7,7 +7,6 @@ from device_types import DeviceType
 from typing import Any, Mapping
 
 CHANCE_TO_CHANGE: float = 0.01
-GENERAL_PARAMETERS: set[str] = set(json.loads(os.getenv("DEVICE_PARAMETERS", '["room","name","status","parameters"]')))
 
 
 class Device:
