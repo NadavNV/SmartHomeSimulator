@@ -233,7 +233,7 @@ def main() -> None:
                 logger.error(f"Attempt {attempt + 1}/{RETRIES} failed. Retrying in {delay:.2f} seconds...")
                 sleep(delay)
         except requests.exceptions.ConnectionError:
-            logger.error(f"Failed to connect to backend")
+            logger.exception(f"Failed to connect to backend")
             delay = 2 ** attempt + random.random()
             logger.error(f"Attempt {attempt + 1}/{RETRIES} failed. Retrying in {delay:.2f} seconds...")
             sleep(delay)
