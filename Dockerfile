@@ -9,6 +9,8 @@ RUN pip install -r requirements.txt
 COPY *.py .
 COPY config/ config/
 COPY devices/ devices/
+COPY config/ config/
 COPY validation/ validation/
+COPY test/ test/
 
 CMD ["python", "main.py"]

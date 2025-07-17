@@ -2,13 +2,11 @@ import config.env  # noqa: F401  # load_dotenv side effect
 import os
 import json
 import random
-import logging
 from typing import Any, Mapping, override
 from datetime import datetime, time, timedelta
-import paho.mqtt.client as paho
 
-from device import Device, CHANCE_TO_CHANGE
-from device_types import DeviceType
+from devices.device import Device, CHANCE_TO_CHANGE
+from devices.device_types import DeviceType
 
 # Minimum temperature (Celsius) for water heater
 MIN_WATER_TEMP: int = int(os.getenv('VITE_MIN_WATER_TEMP', 49))
@@ -35,10 +33,6 @@ class WaterHeater(Device):
     :type room: str
     :param name: Display name of the device.
     :type name: str
-    :param mqtt_client: MQTT communication client.
-    :type mqtt_client: paho.Client
-    :param logger: Logger for status and errors.
-    :type logger: logging.Logger
     :param status: Power status ("on" or "off").
     :type status: str
     :param temperature: Current water temperature.
@@ -56,13 +50,12 @@ class WaterHeater(Device):
 
     :raises ValueError: If target_temperature is out of allowed range.
     """
+
     def __init__(
             self,
             device_id: str,
             room: str,
             name: str,
-            mqtt_client: paho.Client,
-            logger: logging.Logger,
             status: str = "off",
             temperature: int = ROOM_TEMPERATURE,
             target_temperature: int = MIN_WATER_TEMP,
@@ -76,9 +69,7 @@ class WaterHeater(Device):
             device_type=DeviceType.WATER_HEATER,
             room=room,
             name=name,
-            mqtt_client=mqtt_client,
             status=status,
-            logger=logger,
         )
         self._temperature: int = temperature
         if MIN_WATER_TEMP <= target_temperature <= MAX_WATER_TEMP:

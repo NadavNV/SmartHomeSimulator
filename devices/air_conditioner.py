@@ -1,15 +1,12 @@
-import json
-
 import config.env  # noqa: F401  # load_dotenv side effect
-import logging
 import os
+import json
 from enum import auto, StrEnum
 from typing import Any, Mapping, override
 import random
-import paho.mqtt.client as paho
 
-from device import Device, CHANCE_TO_CHANGE
-from device_types import DeviceType
+from devices.device import Device, CHANCE_TO_CHANGE
+from devices.device_types import DeviceType
 
 
 class Mode(StrEnum):
@@ -55,10 +52,6 @@ class AirConditioner(Device):
     :type room: str
     :param name: Display name for the device.
     :type name: str
-    :param mqtt_client: MQTT client instance for publishing/subscribing messages.
-    :type mqtt_client: paho.Client
-    :param logger: Logger instance for event logging.
-    :type logger: logging.Logger
     :param status: Device power status, either "on" or "off".
     :type status: str
     :param temperature: Initial temperature setting in Celsius.
@@ -72,13 +65,12 @@ class AirConditioner(Device):
 
     :raises ValueError: If temperature is outside allowed range.
     """
+
     def __init__(
             self,
             device_id: str,
             room: str,
             name: str,
-            mqtt_client: paho.Client,
-            logger: logging.Logger,
             status: str = "off",
             temperature: int = DEFAULT_AC_TEMPERATURE,
             mode: Mode = DEFAULT_MODE,
@@ -90,9 +82,7 @@ class AirConditioner(Device):
             device_type=DeviceType.AIR_CONDITIONER,
             room=room,
             name=name,
-            mqtt_client=mqtt_client,
             status=status,
-            logger=logger,
         )
         if MIN_AC_TEMP <= temperature <= MAX_AC_TEMP:
             self._temperature: int = temperature

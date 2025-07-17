@@ -2,14 +2,11 @@ import config.env  # noqa: F401  # load_dotenv side effect
 import re
 import os
 import json
-import logging
 from typing import Any, Mapping, override
 import random
-import paho.mqtt.client as paho
 
-from device import Device, CHANCE_TO_CHANGE
-from device_types import DeviceType
-
+from devices.device import Device, CHANCE_TO_CHANGE
+from devices.device_types import DeviceType
 
 # Minimum brightness for dimmable light
 MIN_BRIGHTNESS: int = int(os.getenv('VITE_MIN_BRIGHTNESS', 0))
@@ -38,10 +35,6 @@ class Light(Device):
     :type room: str
     :param name: Human-readable name of the device.
     :type name: str
-    :param mqtt_client: MQTT client instance for communication.
-    :type mqtt_client: paho.mqtt.client.Client
-    :param logger: Logger instance for logging device activity.
-    :type logger: logging.Logger
     :param status: Initial status of the light (default is "off").
     :type status: str
     :param is_dimmable: Whether the light supports dimming.
@@ -55,13 +48,12 @@ class Light(Device):
 
     :raises ValueError: If brightness is out of range or color is not a valid hex code.
     """
+
     def __init__(
             self,
             device_id: str,
             room: str,
             name: str,
-            mqtt_client: paho.Client,
-            logger: logging.Logger,
             status: str = "off",
             is_dimmable: bool = DEFAULT_DIMMABLE,
             brightness: int = DEFAULT_BRIGHTNESS,
@@ -73,9 +65,7 @@ class Light(Device):
             device_type=DeviceType.LIGHT,
             room=room,
             name=name,
-            mqtt_client=mqtt_client,
             status=status,
-            logger=logger,
         )
         self._is_dimmable = is_dimmable
         if MIN_BRIGHTNESS <= brightness <= MAX_BRIGHTNESS:

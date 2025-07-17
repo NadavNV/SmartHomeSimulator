@@ -2,11 +2,9 @@ import config.env  # noqa: F401  # load_dotenv side effect
 from typing import Any, Mapping, override
 import os
 import random
-import logging
-import paho.mqtt.client as paho
 
-from device import Device, CHANCE_TO_CHANGE
-from device_types import DeviceType
+from devices.device import Device, CHANCE_TO_CHANGE
+from devices.device_types import DeviceType
 
 DEFAULT_POSITION: int = int(os.getenv("VITE_DEFAULT_POSITION", 100))
 MIN_POSITION: int = int(os.getenv("MIN_POSITION", 0))
@@ -24,10 +22,6 @@ class Curtain(Device):
     :type room: str
     :param name: Name of the curtain.
     :type name: str
-    :param mqtt_client: MQTT client used for communication.
-    :type mqtt_client: paho.Client
-    :param logger: Logger for debugging and tracking state.
-    :type logger: logging.Logger
     :param status: Current status ("open" or "closed").
     :type status: str
     :param position: Initial position of the curtain (0–100).
@@ -35,13 +29,12 @@ class Curtain(Device):
 
     :raises ValueError: If initial position is out of allowed bounds.
     """
+
     def __init__(
             self,
             device_id: str,
             room: str,
             name: str,
-            mqtt_client: paho.Client,
-            logger: logging.Logger,
             status: str = "off",
             position: int = DEFAULT_POSITION,
     ):
@@ -50,9 +43,7 @@ class Curtain(Device):
             device_type=DeviceType.CURTAIN,
             room=room,
             name=name,
-            mqtt_client=mqtt_client,
             status=status,
-            logger=logger,
         )
         if MIN_POSITION <= position <= MAX_POSITION:
             self._position = position

@@ -3,11 +3,9 @@ from typing import Any, Mapping, override
 import os
 import json
 import random
-import logging
-import paho.mqtt.client as paho
 
-from device import Device, CHANCE_TO_CHANGE
-from device_types import DeviceType
+from devices.device import Device, CHANCE_TO_CHANGE
+from devices.device_types import DeviceType
 
 DEFAULT_AUTO_LOCK: bool = Device.str_to_bool(os.getenv("VITE_DEFAULT_AUTO_LOCK_ENABLED", "False"))
 DEFAULT_BATTERY: int = int(os.getenv("VITE_DEFAULT_BATTERY", 100))
@@ -28,10 +26,6 @@ class DoorLock(Device):
     :type room: str
     :param name: Display name for the device.
     :type name: str
-    :param mqtt_client: MQTT client instance for publishing/subscribing messages.
-    :type mqtt_client: paho.Client
-    :param logger: Logger instance for event logging.
-    :type logger: logging.Logger
     :param status: Current status ("unlocked" or "locked").
     :type status: str
     :param auto_lock_enabled: Whether the auto-lock feature is enabled initially.
@@ -41,13 +35,12 @@ class DoorLock(Device):
 
     :raises ValueError: If battery level is outside allowed range.
     """
+
     def __init__(
             self,
             device_id: str,
             room: str,
             name: str,
-            mqtt_client: paho.Client,
-            logger: logging.Logger,
             status: str = "unlocked",
             auto_lock_enabled: bool = DEFAULT_AUTO_LOCK,
             battery_level: int = DEFAULT_BATTERY,
@@ -58,9 +51,7 @@ class DoorLock(Device):
             device_type=DeviceType.DOOR_LOCK,
             room=room,
             name=name,
-            mqtt_client=mqtt_client,
             status=status,
-            logger=logger,
         )
         self._auto_lock_enabled = auto_lock_enabled
         if MIN_BATTERY <= battery_level <= MAX_BATTERY:
