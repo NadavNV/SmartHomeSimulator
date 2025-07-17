@@ -6,7 +6,7 @@ import paho.mqtt.client as paho
 from paho.mqtt.properties import Properties
 from paho.mqtt.packettypes import PacketTypes
 import json
-from devices.device import create_device, devices
+from core.device_utils import create_device, devices
 from validation.validators import validate_device_data
 
 

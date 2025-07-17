@@ -12,5 +12,6 @@ COPY config/ config/
 COPY validation/ validation/
 COPY test/ test/
 COPY services/ services/
+COPY core/ core/
 
 CMD ["python", "main.py"]
