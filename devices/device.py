@@ -1,9 +1,7 @@
 import config.env  # noqa: F401  # load_dotenv side effect
-import json
 import logging
-import os
 from services.mqtt import publish_mqtt
-from device_types import DeviceType
+from devices.device_types import DeviceType
 from typing import Any, Mapping
 
 CHANCE_TO_CHANGE: float = 0.01
