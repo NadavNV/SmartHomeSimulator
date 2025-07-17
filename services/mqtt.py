@@ -159,8 +159,11 @@ def get_mqtt() -> paho.Client:
 
 
 def publish_mqtt(device_id: str, update: Mapping[str, Any]) -> None:
-    topic = f"{MQTT_TOPIC}/{device_id}"
+    topic = f"{MQTT_TOPIC}/{device_id}/update"
     properties = Properties(PacketTypes.PUBLISH)
     properties.UserProperty = [("sender_id", CLIENT_ID), ("sender_group", "simulator")]
     payload = json.dumps(update)
-    get_mqtt().publish(topic + "/update", payload.encode(), qos=2, properties=properties)
+    try:
+        get_mqtt().publish(topic, payload.encode(), qos=2, properties=properties)
+    except MQTTNotInitializedError:
+        logger.error("Trying to publish with uninitialized MQTT")
