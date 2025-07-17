@@ -20,7 +20,7 @@ from devices.curtain import Curtain
 from devices.door_lock import DoorLock
 from devices.water_heater import WaterHeater
 
-from validation.validators import validate_new_device_data, validate_device_data
+from validation.validators import validate_device_data
 
 logging.basicConfig(
     format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
@@ -51,9 +51,9 @@ devices: dict[str, Device] = {}
 
 
 def create_device(device_data: dict) -> None:
-    success, reason = validate_new_device_data(device_data)
+    success, reasons = validate_device_data(device_data, new_device=True)
     if not success:
-        raise ValueError(reason)
+        raise ValueError(f"{reasons}")
     if device_data["id"] in devices:
         raise ValueError(f"ID {device_data["id"]} already exists")
     kwargs = {
@@ -161,22 +161,22 @@ def on_message(
             method = topic_parts[-1]
             match method:
                 case "update":
-                    # TODO: Make sure id and type can't be changed
                     if device_id in devices:
-                        success, reason = validate_device_data(payload)
+                        success, reasons = validate_device_data(payload, device_type=devices[device_id].type)
                         if success:
                             devices[device_id].update(payload)
                             return
                         else:
-                            logger.error(f"Failed to update device, reason: {reason}")
+                            logger.error(f"Failed to update device, reasons: {reasons}")
                     logger.error(f"Device ID {device_id} not found")
+                    return
                 case "post":
-                    success, reason = validate_new_device_data(payload)
+                    success, reasons = validate_device_data(payload, new_device=True)
                     if success:
                         create_device(device_data=payload)
                         return
                     else:
-                        logger.error(f"Failed to create device, reason: {reason}")
+                        logger.error(f"Failed to create device, reasons: {reasons}")
                 case "delete":
                     if device_id in devices:
                         devices.pop(device_id)
@@ -192,7 +192,7 @@ def on_message(
     except UnicodeError as e:
         logger.exception(f"Error decoding payload: {str(e)}")
     except ValueError as e:
-        logger.exception(f"Value error: {str(e)}")
+        logger.exception(f"{str(e)}")
 
 
 client_id = f"simulator-{os.getenv('HOSTNAME')}"
@@ -224,11 +224,11 @@ def main() -> None:
             response = requests.get(API_URL + '/api/devices')
             if 200 <= response.status_code < 400:
                 for device_data in response.json():
-                    success, reason = validate_new_device_data(device_data)
+                    success, reasons = validate_device_data(device_data, new_device=True)
                     if success:
                         create_device(device_data=device_data)
                     else:
-                        logger.error(f"Failed to create device, reason: {reason}")
+                        logger.error(f"Failed to create device, reasons: {reasons}")
                 break
             else:
                 delay = 2 ** attempt + random.random()
@@ -241,6 +241,8 @@ def main() -> None:
             delay = 2 ** attempt + random.random()
             logger.error(f"Attempt {attempt + 1}/{RETRIES} failed. Retrying in {delay:.2f} seconds...")
             sleep(delay)
+        except ValueError as e:
+            logger.error(f"{str(e)}")
 
     if not devices:
         logger.error("Failed to fetch devices. Shutting down.")
