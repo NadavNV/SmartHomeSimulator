@@ -1,4 +1,3 @@
-import config.env  # noqa: F401  # load_dotenv side effect
 import logging
 from services.mqtt import publish_mqtt
 from devices.device_types import DeviceType
@@ -87,7 +86,8 @@ class Device:
 
     def update(self, new_values: Mapping[str, Any]) -> None:
         for key, value in new_values.items():
-            self._logger.info(f"Setting parameter '{key}' to value '{value}'")
+            if key != "parameters":
+                self._logger.info(f"Setting parameter '{key}' to value '{value}'")
             match key:
                 case "room":
                     self.room = value
@@ -100,6 +100,15 @@ class Device:
 
     def update_parameters(self, new_values: Mapping[str, Any]):
         raise NotImplementedError()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "type": self.type.value,
+            "room": self.room,
+            "name": self.name,
+            "status": self.status
+        }
 
     @staticmethod
     def str_to_bool(string: str) -> bool:

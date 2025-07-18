@@ -7,6 +7,7 @@ import random
 from devices.device import Device, CHANCE_TO_CHANGE
 from devices.device_types import DeviceType
 
+DEFAULT_LOCK_STATUS = os.getenv("VITE_DEFAULT_LOCK_STATUS", "unlocked")
 DEFAULT_AUTO_LOCK: bool = Device.str_to_bool(os.getenv("VITE_DEFAULT_AUTO_LOCK_ENABLED", "False"))
 DEFAULT_BATTERY: int = int(os.getenv("VITE_DEFAULT_BATTERY", 100))
 MIN_BATTERY: int = int(os.getenv("MIN_BATTERY", 0))
@@ -41,7 +42,7 @@ class DoorLock(Device):
             device_id: str,
             room: str,
             name: str,
-            status: str = "unlocked",
+            status: str = DEFAULT_LOCK_STATUS,
             auto_lock_enabled: bool = DEFAULT_AUTO_LOCK,
             battery_level: int = DEFAULT_BATTERY,
     ):
@@ -119,3 +120,12 @@ class DoorLock(Device):
             match key:
                 case "auto_lock_enabled":
                     self.auto_lock_enabled = value
+
+    @override
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["parameters"] = {
+            "auto_lock_enabled": self.auto_lock_enabled,
+            "battery_level": self.battery_level,
+        }
+        return result

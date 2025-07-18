@@ -3,7 +3,7 @@ import os
 import json
 import random
 from typing import Any, Mapping, override
-from datetime import datetime, time, timedelta
+from datetime import datetime as dt, time, timedelta
 
 from devices.device import Device, CHANCE_TO_CHANGE
 from devices.device_types import DeviceType
@@ -15,6 +15,10 @@ MAX_WATER_TEMP: int = int(os.getenv('VITE_MAX_WATER_TEMP', 60))
 ROOM_TEMPERATURE: int = 23
 HEATING_RATE: int = 1
 
+DEFAULT_WATER_HEATER_STATUS: str = os.getenv("VITE_DEFAULT_WATER_HEATER_STATUS", "off")
+DEFAULT_WATER_TEMP: int = int(os.getenv("VITE_DEFAULT_WATER_TEMP", 60))
+DEFAULT_IS_HEATING: bool = Device.str_to_bool(os.getenv("VITE_DEFAULT_IS_HEATING", "false"))
+DEFAULT_TIMER_ENABLED: bool = Device.str_to_bool(os.getenv("VITE_DEFAULT_TIMER_ENABLED", "false"))
 DEFAULT_SCHEDULED_ON: time = time.fromisoformat(os.getenv("VITE_DEFAULT_START_TIME", "06:30"))
 DEFAULT_SCHEDULED_OFF: time = time.fromisoformat(os.getenv("VITE_DEFAULT_STOP_TIME", "08:00"))
 
@@ -58,7 +62,7 @@ class WaterHeater(Device):
             name: str,
             status: str = "off",
             temperature: int = ROOM_TEMPERATURE,
-            target_temperature: int = MIN_WATER_TEMP,
+            target_temperature: int = DEFAULT_WATER_TEMP,
             is_heating: bool = False,
             timer_enabled: bool = False,
             scheduled_on: time = DEFAULT_SCHEDULED_ON,
@@ -209,15 +213,15 @@ class WaterHeater(Device):
         # Adjusting status
         if self.timer_enabled:
             delta = timedelta(seconds=5)
-            now = datetime.now()
+            now = dt.now()
             if (
                     self.status == "off" and
-                    (now - delta <= datetime.combine(now.date(), self.scheduled_on) <= now + delta)
+                    (now - delta <= dt.combine(now.date(), self.scheduled_on) <= now + delta)
             ):
                 update['status'] = self.status = "on"
             elif (
                     self.status == "on" and
-                    (now - delta <= datetime.combine(now.date(), self.scheduled_off) <= now + delta)
+                    (now - delta <= dt.combine(now.date(), self.scheduled_off) <= now + delta)
             ):
                 update['status'] = self.status = "off"
         # Adjusting is_heating
@@ -288,3 +292,16 @@ class WaterHeater(Device):
                     self.scheduled_on = time.fromisoformat(self.fix_time_string(value))
                 case "scheduled_off":
                     self.scheduled_off = time.fromisoformat(self.fix_time_string(value))
+
+    @override
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["parameters"] = {
+            "temperature": self.temperature,
+            "target_temperature": self.target_temperature,
+            "is_heating": self.is_heating,
+            "timer_enabled": self.timer_enabled,
+            "scheduled_on": self.scheduled_on.isoformat()[:5],  # Remove seconds
+            "scheduled_off": self.scheduled_off.isoformat()[:5],
+        }
+        return result

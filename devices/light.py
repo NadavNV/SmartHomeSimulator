@@ -12,6 +12,7 @@ from devices.device_types import DeviceType
 MIN_BRIGHTNESS: int = int(os.getenv('VITE_MIN_BRIGHTNESS', 0))
 # Maximum brightness for dimmable light
 MAX_BRIGHTNESS: int = int(os.getenv("VITE_MAX_BRIGHTNESS", 100))
+DEFAULT_LIGHT_STATUS = os.getenv("VITE_DEFAULT_LIGHT_STATUS", "off")
 DEFAULT_DIMMABLE: bool = Device.str_to_bool(os.getenv("VITE_DEFAULT_DIMMABLE", "false"))
 DEFAULT_BRIGHTNESS: int = int(os.getenv("VITE_DEFAULT_BRIGHTNESS", 80))
 DEFAULT_DYNAMIC_COLOR: bool = Device.str_to_bool(os.getenv("VITE_DEFAULT_DYNAMIC_COLOR", "false"))
@@ -193,3 +194,14 @@ class Light(Device):
                     self.brightness = value
                 case "color":
                     self.color = value
+
+    @override
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["parameters"] = {
+            "is_dimmable": self.is_dimmable,
+            "brightness": self.brightness,
+            "dynamic_color": self.dynamic_color,
+            "color": self.color,
+        }
+        return result

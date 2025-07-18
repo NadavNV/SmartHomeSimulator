@@ -33,12 +33,13 @@ MIN_AC_TEMP: int = int(os.getenv('VITE_MIN_AC_TEMP', 16))
 # Maximum temperature (Celsius) for air conditioner
 MAX_AC_TEMP: int = int(os.getenv('VITE_MAX_AC_TEMP', 30))
 
+DEFAULT_AC_STATUS = os.getenv("VITE_DEFAULT_AC_STATUS", "off")
 DEFAULT_AC_TEMPERATURE: int = int(os.getenv("VITE_DEFAULT_AC_TEMP", 24))
 DEFAULT_MODE: Mode = Mode(value=os.getenv("VITE_DEFAULT_AC_MODE", "cool"))
 DEFAULT_FAN: FanSpeed = FanSpeed(value=os.getenv("VITE_DEFAULT_AC_FAN", "low"))
 DEFAULT_SWING: Swing = Swing(value=os.getenv("VITE_DEFAULT_AC_SWING", "off"))
 
-PARAMETERS: set[str] = set(json.loads(os.getenv("AC_PARAMETERS", "[\"temperature\",\"mode\",\"fan_speed\",\"swing\"]")))
+PARAMETERS: set[str] = set(json.loads(os.getenv("AC_PARAMETERS", '["temperature","mode","fan_speed","swing"]')))
 
 
 class AirConditioner(Device):
@@ -71,7 +72,7 @@ class AirConditioner(Device):
             device_id: str,
             room: str,
             name: str,
-            status: str = "off",
+            status: str = DEFAULT_AC_STATUS,
             temperature: int = DEFAULT_AC_TEMPERATURE,
             mode: Mode = DEFAULT_MODE,
             fan_speed: FanSpeed = DEFAULT_FAN,
@@ -210,3 +211,14 @@ class AirConditioner(Device):
                     self.fan_speed = FanSpeed(value=value)
                 case "swing":
                     self.swing = Swing(value=value)
+
+    @override
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["parameters"] = {
+            "temperature": self.temperature,
+            "mode": self.mode.value,
+            "fan_speed": self.fan_speed.value,
+            "swing": self.swing.value,
+        }
+        return result

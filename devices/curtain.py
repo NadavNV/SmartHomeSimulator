@@ -7,6 +7,7 @@ from devices.device import Device, CHANCE_TO_CHANGE
 from devices.device_types import DeviceType
 
 DEFAULT_POSITION: int = int(os.getenv("VITE_DEFAULT_POSITION", 100))
+DEFAULT_CURTAIN_STATUS: str = os.getenv("VITE_DEFAULT_CURTAIN_STATUS", "open")
 MIN_POSITION: int = int(os.getenv("MIN_POSITION", 0))
 MAX_POSITION: int = int(os.getenv("MAX_POSITION", 100))
 POSITION_RATE: int = 1
@@ -35,7 +36,7 @@ class Curtain(Device):
             device_id: str,
             room: str,
             name: str,
-            status: str = "off",
+            status: str = DEFAULT_CURTAIN_STATUS,
             position: int = DEFAULT_POSITION,
     ):
         super().__init__(
@@ -97,3 +98,11 @@ class Curtain(Device):
         Placeholder for curtain parameter updates. Not implemented.
         """
         pass
+
+    @override
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["parameters"] = {
+            "position": self.position,
+        }
+        return result

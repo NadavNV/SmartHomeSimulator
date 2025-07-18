@@ -3,6 +3,7 @@ import sys
 import requests
 import random
 import logging
+from typing import Any, Mapping
 from time import sleep
 from datetime import time
 from validation.validators import validate_device_data
@@ -12,18 +13,26 @@ RETRIES = 5
 
 API_URL = os.getenv("API_URL", default='http://localhost:5200')
 
-devices = {}
+devices: dict[str, Any] = {}
 logger = logging.getLogger("smart-home.core")
 
 
 # TODO: docstrings
-def create_device(device_data: dict) -> None:
+def create_device(device_data: Mapping[str, Any]) -> None:
+    """
+    Creates a new Device based on the provided data and adds it to the local
+    data structure.
+
+    :param device_data:
+    :return:
+    """
     from devices.device_types import DeviceType
     from devices.light import Light
     from devices.curtain import Curtain
     from devices.door_lock import DoorLock
     from devices.water_heater import WaterHeater
     from devices.air_conditioner import AirConditioner, Mode, FanSpeed, Swing
+
     success, reasons = validate_device_data(device_data, new_device=True)
     if not success:
         raise ValueError(f"{reasons}")
@@ -103,3 +112,7 @@ def load_devices():
     if not devices:
         logger.error("Failed to fetch devices. Shutting down.")
         sys.exit(1)
+
+
+def get_devices() -> dict[str, Any]:
+    return devices

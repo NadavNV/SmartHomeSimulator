@@ -1,4 +1,3 @@
-import config.env  # noqa: F401  # load_dotenv side effect
 from time import sleep
 import logging.handlers
 import os
