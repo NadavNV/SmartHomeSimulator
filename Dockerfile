@@ -9,8 +9,6 @@ RUN pip install --no-cache -r requirements.txt
 COPY *.py .
 COPY config/ config/
 COPY devices/ devices/
-COPY config/ config/
-COPY validation/ validation/
 COPY test/ test/
 COPY services/ services/
 COPY core/ core/
